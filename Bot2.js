@@ -95,7 +95,7 @@ Bot.prototype = {
 	}
 };
 
-//Check if enemy is a threat
+//Check if enemy is a threat/opportunity
 function withinThreatRange(myOrganisms, organism, totalSize, dodgeDistance) {
 	var threat = 0;
 	var shouldSplit = false;
@@ -130,6 +130,8 @@ function withinThreatRange(myOrganisms, organism, totalSize, dodgeDistance) {
 			//Can I safely eat this virus?
 			if (myOrganisms.length < 16) {
 				threat += myOrganisms[i].size * 0.6;
+			} else if (threat == 0) {
+				threat -= organism.size;
 			}
 		} else if (currentThreatDistance < threatDistance + dodgeDistance) {
 			threat += myOrganisms[i].size;
@@ -145,7 +147,7 @@ function withinThreatRange(myOrganisms, organism, totalSize, dodgeDistance) {
 	if (threat < 1) {
 		//Is it a non-edible virus?
 		if ((organism.isVirus && myOrganisms.length < 16)) {
-			return new Impulse(threat, organism.x, organism.y, false, false);
+			return null;
 		}
 
 		//Can I safely eat it?
@@ -166,7 +168,7 @@ function withinThreatRange(myOrganisms, organism, totalSize, dodgeDistance) {
 		if (canBeEaten(organism, closestOfMyOrganisms)) {
 
 			//Can I split to eat it?
-			if (canBeSplitEaten(organism, closestOfMyOrganisms)) {
+			if (totalSize > 200 && canBeSplitEaten(organism, closestOfMyOrganisms)) {
 
 				//Is it within range?
 				var splitDistance = calcSplitDistance(closestOfMyOrganisms);
@@ -205,7 +207,8 @@ function distanceTilConsumption(myOrganism, otherOrganism) {
 	if (otherOrganism.isVirus && !canBeEaten(otherOrganism, myOrganism)) {
 		return -1;
 	}
-	return distance(myOrganism, otherOrganism) - myOrganism.size / 2 - otherOrganism.size / 2 - 0;
+	//TODO fix this
+	return distance(myOrganism, otherOrganism) - ;
 }
 function canBeSplitEaten(food, eater) {
 	return food.size * 1.1 < eater.size / 2;
@@ -215,12 +218,14 @@ function canBeEaten(food, eater) {
 }
 
 var Impulse = function(weight,x,y,shootMass,split) {
+	this.weight = weight;
 	this.x = x;
 	this.y = y;
 	this.shootMass = shootMass;
 	this.split = split;
 };
 Impulse.prototype = {
+	weight: 0,
 	x: 0,
 	y: 0,
 	shootMass: false,
