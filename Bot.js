@@ -88,7 +88,7 @@ Bot.prototype={
 				}
 			},
 			1,
-			'#FF5A5E'	
+			'#FF5A5E'
 		),
 		new Consideration(
 			"Nearest Target",
@@ -129,7 +129,7 @@ Bot.prototype={
 		new Consideration(
 			"Split based on distance",
 			function(myOrganism,otherOrganism,actionType){
-				var distance=0 //FIXME Find the correct distance
+				var distance=0; //FIXME Find the correct distance
 				return -(actionType=='split')*-distance
 			},
 			0,
