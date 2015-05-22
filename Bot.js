@@ -288,6 +288,9 @@ function withinThreatRange(myOrganisms, organism, totalSize, dodgeDistance) {
 					label = 'Split Threat';
 				}
 			}
+			if (isTravelingTowardsMe(myOrganisms[i], organism)) {
+				threatDistance += distance(organism.ox, organism.oy, organism.dx, organism.dy);
+			}
 
 		//Can I eat this virus?
 		} else if (canBeEaten(organism, myOrganisms[i])) {
@@ -377,7 +380,7 @@ function withinThreatRange(myOrganisms, organism, totalSize, dodgeDistance) {
 		}
 	}
 	if (threat != 0) {
-		return new Impulse(threat, organism.x, organism.y, impulseDistance, shouldShootMass, shouldSplit, label, color);
+		return new Impulse(threat, organism.ox + organism.dx, organism.oy + organism.dy, impulseDistance, shouldShootMass, shouldSplit, label, color);
 	} else {
 		return null;
 	}
@@ -394,9 +397,9 @@ function createEdgeThreat(organism, totalSize, dodgeDistance) {
 	}
 }
 function isTravelingTowardsMe(food, eater) {
-	var distanceX = eater.x - food.x;
-	var distanceY = eater.y - food.y;
-	return Math.abs(distanceX - eater.dx) < 10 && Math.abs(distanceY - eater.dy) < 10;
+	var enemyVector = toDegrees(eater.dx, eater.dy, eater.ox, eater.oy);
+	var enemyDirection = toDegrees(food.ox, food.oy, eater.ox, eater.oy);
+	return Math.abs(enemyVector - enemyDirection) < 15 || Math.abs(Math.min(enemyVector, enemyDirection) + 360 - Math.max(enemyDirection, enemyVector)) < 15;
 }
 function sanitizeDegrees(degrees) {
 	while (degrees > 359) {
