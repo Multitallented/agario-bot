@@ -5,7 +5,6 @@ var Bot=function(move,split,shoot){
 	this.behaviorChart=new Chart(behaviorCtx).Doughnut(this.impulses);
 };
 var runOnce = true;
-var lastLog = 101;
 var pressingButton = window.pressingButton = false;
 var attackSplitCooldown = 0;
 var attackSplitWarmup = 0;
@@ -64,7 +63,7 @@ Bot.prototype = {
 
 
 		this.impulses=[];
-		var myOrganism=myOrganisms[0],
+		var myOrganism=getGeneralOrganism(myOrganisms, this.totalSize),
 			otherOrganisms=organisms.filter(function(organism){
 				if(organism.x2){
 					organism.dx=organism.x-organism.x2
@@ -114,8 +113,8 @@ Bot.prototype = {
 		}
 		//Take action on immediate impulses if needed
 		var absoluteTotalThreat = 0;
-		var isThreatened = false;
-		var currentEscapeDirection = -1;
+		var threatCount = 0;
+		var currentEscapeDirection = 0;
 		var shouldSplit = false;
 
 		//Sort by biggest threat
@@ -123,50 +122,55 @@ Bot.prototype = {
 			return b.threat - a.threat;
 		});
 
+		//If under threat, add threats for near edges
 		if (this.impulses.length > 0 && this.impulses[0].threat > 0) {
-
 			var edgeThreat = createEdgeThreat(myOrganism, this.totalSize, this.dodgeDistance);
 			if (edgeThreat != undefined) {
 				this.impulses.push(edgeThreat);
 			}
 		}
 
-		var leastDistance = 999999;
+		var hasOpportunity = false;
+		for (var i=0; i<this.impulses.length; i++) {
+			if (this.impulses[i].threat < 0) {
+				hasOpportunity = true;
+				break;
+			}
+		}
+
 		for (var i=0; i<this.impulses.length; i++) {
 			var impulse = this.impulses[i];
-			if (impulse.threat > 0) {
-				isThreatened = true;
+			//Follow through with an attack split
+			if (impulse.threat > 0 && !(attackSplitCooldown > 0 && hasOpportunity)) {
+				threatCount++;
 				if (impulse.split) {
 					shouldSplit = true;
 				}
-				var currentDistance = distance({ox: impulse.x, oy: impulse.y}, myOrganism);
-				if (currentDistance < leastDistance) {
-					leastDistance = currentDistance;
-				}
-				//Get individual escape direction
-				var newEscapeDirection = toDegrees(myOrganism.ox, myOrganism.oy, impulse.x, impulse.y)
-				//Run away from the threat not towards it
-				newEscapeDirection += 180;
-				newEscapeDirection = sanitizeDegrees(newEscapeDirection);
-
-				//Calc new escape direction
-				if (currentEscapeDirection < 0) {
-					currentEscapeDirection = newEscapeDirection;
-				} else {
-					var degreeDifference = Math.abs(newEscapeDirection - currentEscapeDirection);
-
-					//adjust direction based on threat weight
-					var weightedDifference = impulse.threat / absoluteTotalThreat * degreeDifference / 2;
-					if (degreeDifference > 180) {
-						currentEscapeDirection = Math.max(newEscapeDirection, currentEscapeDirection) + 360 - weightedDifference;
-					} else {
-						currentEscapeDirection = Math.min(newEscapeDirection, currentEscapeDirection) + weightedDifference;
-					}
-					currentEscapeDirection = sanitizeDegrees(currentEscapeDirection);
-				}
+				currentEscapeDirection += toDegrees(myOrganism.ox, myOrganism.oy, impulse.x, impulse.y) * impulse.threat;
+				////Get individual escape direction
+				//var newEscapeDirection = toDegrees(myOrganism.ox, myOrganism.oy, impulse.x, impulse.y);
+				////Run away from the threat not towards it
+				//newEscapeDirection += 180;
+				//newEscapeDirection = sanitizeDegrees(newEscapeDirection);
+				//
+				////Calc new escape direction
+				//if (currentEscapeDirection < 0) {
+				//	currentEscapeDirection = newEscapeDirection;
+				//} else {
+				//	var degreeDifference = Math.abs(newEscapeDirection - currentEscapeDirection);
+				//
+				//	//adjust direction based on threat weight
+				//	var weightedDifference = impulse.threat / absoluteTotalThreat * degreeDifference / 2;
+				//	if (degreeDifference > 180) {
+				//		currentEscapeDirection = Math.max(newEscapeDirection, currentEscapeDirection) + 360 - weightedDifference;
+				//	} else {
+				//		currentEscapeDirection = Math.min(newEscapeDirection, currentEscapeDirection) + weightedDifference;
+				//	}
+				//	currentEscapeDirection = sanitizeDegrees(currentEscapeDirection);
+				//}
 
 			//ignore opportunities if threatened
-			} else if (!isThreatened && impulse.threat < 0) {
+			} else if (threatCount == 0 && impulse.threat < 0) {
 				this.move(impulse.x, impulse.y);
 				if (impulse.split && !pressingButton) {
 					attackSplitCooldown = 80;
@@ -188,10 +192,13 @@ Bot.prototype = {
 			absoluteTotalThreat += Math.abs(impulse.threat);
 		}
 
+
 		//Execute escape manuevers if threatened
-		if (isThreatened && currentEscapeDirection > -1) {
-			var escapeCoords = toCoords(currentEscapeDirection, myOrganism.ox, myOrganism.oy);
-			this.move(escapeCoords.x + myOrganism.ox, escapeCoords.y + myOrganism.oy);
+		if (threatCount > 0) {
+			currentEscapeDirection = sanitizeDegrees(currentEscapeDirection / absoluteTotalThreat + 180);
+
+			var escapeCoords = toCoords(currentEscapeDirection, myOrganism.ox, myOrganism.oy, 400);
+			this.move(escapeCoords.x, escapeCoords.y);
 			if (shouldSplit && !pressingButton) {
 				pressingButton = true;
 				setTimeout(function() {
@@ -235,18 +242,37 @@ Bot.prototype = {
 		if (myOrganisms == undefined || myOrganisms == null || myOrganisms.length < 1) {
 			return;
 		}
+		var totalSize = 0;
+		for (var i=0; i< myOrganisms.length; i++) {
+			totalSize += myOrganisms[i].size;
+		}
+		var myOrganism=getGeneralOrganism(myOrganisms, totalSize);
+		var threatCount = 0;
+		var absoluteTotalThreat = 0;
+		var currentEscapeDirection = 0;
 		for (var i=0; i<this.impulses.length; i++) {
 			var impulse = this.impulses[i];
-			var myOrganism=myOrganisms[0];
 			ctx.beginPath();
 
 			if(impulse.threat > 0){
-				ctx.strokeStyle='red'
+				threatCount++;
+				absoluteTotalThreat += Math.abs(impulse.threat);
+				currentEscapeDirection += toDegrees(myOrganism.ox, myOrganism.oy, impulse.x, impulse.y) * impulse.threat;
+				ctx.strokeStyle='red';
 			} else {
-				ctx.strokeStyle='green'
+				ctx.strokeStyle='green';
 			}
 			ctx.moveTo(myOrganism.ox,myOrganism.oy);
 			ctx.lineTo(impulse.x, impulse.y);
+			ctx.stroke();
+		}
+		if (threatCount > 0) {
+			currentEscapeDirection = sanitizeDegrees(currentEscapeDirection / absoluteTotalThreat + 180);
+			var escapeCoords = toCoords(currentEscapeDirection, myOrganism.ox, myOrganism.oy, 400);
+			ctx.beginPath();
+			ctx.strokeStyle='blue';
+			ctx.moveTo(myOrganism.ox,myOrganism.oy);
+			ctx.lineTo(escapeCoords.x, escapeCoords.y);
 			ctx.stroke();
 		}
 	}
@@ -258,7 +284,7 @@ function withinThreatRange(myOrganisms, organism, totalSize, dodgeDistance) {
 	var threat = 0;
 	var shouldSplit = false;
 	var shouldShootMass = false;
-	var myOrganism = myOrganisms[0];
+	var myOrganism = getGeneralOrganism(myOrganisms, totalSize);
 	var color= '#FF0000';
 	var label = 'Immediate';
 
@@ -274,6 +300,7 @@ function withinThreatRange(myOrganisms, organism, totalSize, dodgeDistance) {
 
 		//Calc if organism is a threat, and if so, then at what range should I be worried
 		var threatDistance = 9999999;
+		var highPriority = 1;
 		if (!organism.isVirus) {
 
 			//Can he eat me?
@@ -283,13 +310,19 @@ function withinThreatRange(myOrganisms, organism, totalSize, dodgeDistance) {
 				if (!canBeSplitEaten(myOrganisms[i], organism) || totalSize * 6 < organism.size) {
 					threatDistance = consumptionDistance(myOrganisms[i], organism);
 					label = 'Consume Threat';
+					highPriority += 2;
 				} else {
 					threatDistance = calcSplitDistance(myOrganisms[i], organism);
 					label = 'Split Threat';
 				}
 			}
 			if (isTravelingTowardsMe(myOrganisms[i], organism)) {
-				threatDistance += distance(organism.ox, organism.oy, organism.dx, organism.dy);
+				threatDistance += distance(organism.ox, organism.oy, organism.dx, organism.dy) * 2;
+				highPriority += 0.25;
+			}
+			if (isTravelingTowardsMe(organism, myOrganisms[i])) {
+				threatDistance += distance(myOrganisms[i].ox, myOrganisms[i].oy, myOrganisms[i].dx, myOrganisms[i].dy) * 2;
+				highPriority += 0.25;
 			}
 
 		//Can I eat this virus?
@@ -306,15 +339,15 @@ function withinThreatRange(myOrganisms, organism, totalSize, dodgeDistance) {
 
 				//Can I safely eat this virus?
 				if (myOrganisms.length < 16) {
-					threat += myOrganisms[i].size * 0.6;
+					threat += myOrganisms[i].size * 0.6 * highPriority;
 				} else if (threat == 0) {
 					threat -= organism.size;
 				}
 			} else if (currentThreatDistance < threatDistance + dodgeDistance) {
-				threat += myOrganisms[i].size;
+				threat += myOrganisms[i].size * highPriority;
 
 				//Should I split to avoid this?
-				if (currentThreatDistance < threatDistance + dodgeDistance && Math.abs(organism.dx) + Math.abs(organism.dy) > 120 && isTravelingTowardsMe(myOrganisms[i], organism)) {
+				if (currentThreatDistance < threatDistance + dodgeDistance && Math.abs(organism.dx) + Math.abs(organism.dy) > 60 && isTravelingTowardsMe(myOrganisms[i], organism)) {
 					console.log('splitting to escape from ' + organism.name);
 					shouldSplit = true;
 				}
@@ -356,11 +389,11 @@ function withinThreatRange(myOrganisms, organism, totalSize, dodgeDistance) {
 				//Is it within range?
 				var splitDistance = calcSplitDistance(organism, closestOfMyOrganisms);
 				if (attackSplitCooldown == 0 && splitDistance + dodgeDistance / 2 > shortestDistance) {
-					if (attackSplitWarmup != 1) {
-						attackSplitWarmup = 5;
+					if (attackSplitWarmup == 0) {
+						attackSplitWarmup = 2;
 					}
 					threat -= organism.size + Math.min(0, Math.max(organism.size, (shortestDistance - splitDistance) * organism.size));
-					if (splitDistance > shortestDistance && myOrganisms.length < 16) {
+					if (attackSplitWarmup < 2 && splitDistance > shortestDistance && myOrganisms.length < 16) {
 						shouldSplit = true;
 						label = 'Split to eat';
 						color = '#00FF00';
@@ -379,21 +412,39 @@ function withinThreatRange(myOrganisms, organism, totalSize, dodgeDistance) {
 			}
 		}
 	}
+	var threatX = organism.ox;
+	var threatY = organism.oy;
+	if (isTravelingTowardsMe(myOrganism, organism)) {
+		threatX += organism.dx;
+		threatY += organism.dy;
+	}
+
 	if (threat != 0) {
-		return new Impulse(threat, organism.ox + organism.dx, organism.oy + organism.dy, impulseDistance, shouldShootMass, shouldSplit, label, color);
+		return new Impulse(threat, threatX, threatY, impulseDistance, shouldShootMass, shouldSplit, label, color);
 	} else {
 		return null;
 	}
 }
+
+function getGeneralOrganism(myOrganisms, totalSize) {
+	var myOrganism = {ox: 0, oy: 0, size: totalSize};
+	for (var i=0; i< myOrganisms.length; i++) {
+		myOrganism.ox += myOrganisms[i].ox;
+		myOrganism.oy += myOrganisms[i].oy;
+	}
+	myOrganism.ox = myOrganism.ox / myOrganisms.length;
+	myOrganism.oy = myOrganism.oy / myOrganisms.length;
+	return myOrganism;
+}
 function createEdgeThreat(organism, totalSize, dodgeDistance) {
-	if (organism.x < dodgeDistance) {
-		return new Impulse(totalSize, 0, organism.y, dodgeDistance, false, false, 'Left Threat', '#FF0000');
-	} else if (organism.y < dodgeDistance) {
-		return new Impulse(totalSize, organism.x, 0, dodgeDistance, false, false, 'Top Edge', '#FF0000');
-	} else if (organism.x > 11200 - dodgeDistance) {
-		return new Impulse(totalSize, 11200, organism.y, dodgeDistance, false, false, 'Right Edge', '#FF0000');
-	} else if (organism.y > 11200 - dodgeDistance) {
-		return new Impulse(totalSize, organism.x, 11200, dodgeDistance, false, false, 'Bottom Edge', '#FF0000');
+	if (organism.x < dodgeDistance + totalSize) {
+		return new Impulse(totalSize, 0, organism.y, dodgeDistance + totalSize, false, false, 'Left Threat', '#FF0000');
+	} else if (organism.y < dodgeDistance + totalSize) {
+		return new Impulse(totalSize, organism.x, 0, dodgeDistance + totalSize, false, false, 'Top Edge', '#FF0000');
+	} else if (organism.x > 11200 - dodgeDistance - totalSize) {
+		return new Impulse(totalSize, 11200, organism.y, dodgeDistance + totalSize, false, false, 'Right Edge', '#FF0000');
+	} else if (organism.y > 11200 - dodgeDistance - totalSize) {
+		return new Impulse(totalSize, organism.x, 11200, dodgeDistance + totalSize, false, false, 'Bottom Edge', '#FF0000');
 	}
 }
 function isTravelingTowardsMe(food, eater) {
@@ -413,10 +464,10 @@ function toDegrees(x1,y1, x2, y2) {
 	var rad = Math.atan2(deltaY, deltaX); // In radians
 	return rad * (180 / Math.PI);
 }
-function toCoords(degrees, x, y) {
+function toCoords(degrees, x, y, multiplier) {
 	var coordinates = {x: x, y: y};
-	coordinates.x = 400 * Math.cos(degrees * Math.PI / 180);
-	coordinates.y = 400 * Math.sin(degrees * Math.PI / 180);
+	coordinates.x += multiplier * Math.cos(degrees * Math.PI / 180);
+	coordinates.y += multiplier * Math.sin(degrees * Math.PI / 180);
 	return coordinates;
 }
 function distance(organism1, organism2) {
