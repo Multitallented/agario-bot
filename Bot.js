@@ -4,16 +4,20 @@ var Bot=function(move,split,shoot){
 	this.shoot=shoot;
 	this.behaviorChart=new Chart(behaviorCtx).Doughnut(this.impulses);
 };
+var runOnce = true;
+var lastLog = 101;
+var pressingButton = window.pressingButton = false;
+var attackSplitCooldown = 0;
+var attackSplitWarmup = 0;
 Bot.prototype = {
 	impulses: [],
-	pressingButton: false,
 	largestSelf: 10,
 	totalSize: 10,
 	lastStateChangeDate:null,
 	runOnce: true,
 	gameHistory:[],
 	scoreHistory:[],
-	dodgeDistance: 100,
+	dodgeDistance: 150,
 	onTick: function (organisms, myOrganisms, score) {
 		//Check Dead
 		if (myOrganisms.length<1) {
@@ -73,19 +77,26 @@ Bot.prototype = {
 				return myOrganisms.indexOf(organism)==-1
 			});
 		var skittles = otherOrganisms.filter(function(organism) {
-			return organism.name == "" && !organism.isVirus;
+			return organism.name == "" && !organism.isVirus && organism.size < 15;
 		});
 		otherOrganisms = otherOrganisms.filter(function(organism) {
-			return organism.name != "";
+			return organism.size > 14;
 		});
 		if (myOrganism == undefined || myOrganism == null) {
 			return;
 		}
 
+
+		if (attackSplitCooldown > 0) {
+			attackSplitCooldown--;
+		}
+		if (attackSplitWarmup > 0) {
+			attackSplitWarmup--;
+		}
 		//Find largest size
 		this.largestSelf = 10;
 		this.totalSize = 0;
-		for (var i=0;i<myOrganisms; i++) {
+		for (var i=0;i<myOrganisms.length; i++) {
 			this.totalSize += myOrganisms[i].size;
 			this.largestSelf = Math.max(this.largestSelf, myOrganisms[i].size);
 		}
@@ -108,13 +119,29 @@ Bot.prototype = {
 		var shouldSplit = false;
 
 		//Sort by biggest threat
-		this.impulses.sort(function(a,b){ return b.threat - a.threat});
+		this.impulses.sort(function(a,b){
+			return b.threat - a.threat;
+		});
+
+		if (this.impulses.length > 0 && this.impulses[0].threat > 0) {
+
+			var edgeThreat = createEdgeThreat(myOrganism, this.totalSize, this.dodgeDistance);
+			if (edgeThreat != undefined) {
+				this.impulses.push(edgeThreat);
+			}
+		}
+
+		var leastDistance = 999999;
 		for (var i=0; i<this.impulses.length; i++) {
 			var impulse = this.impulses[i];
 			if (impulse.threat > 0) {
 				isThreatened = true;
 				if (impulse.split) {
 					shouldSplit = true;
+				}
+				var currentDistance = distance({ox: impulse.x, oy: impulse.y}, myOrganism);
+				if (currentDistance < leastDistance) {
+					leastDistance = currentDistance;
 				}
 				//Get individual escape direction
 				var newEscapeDirection = toDegrees(myOrganism.ox, myOrganism.oy, impulse.x, impulse.y)
@@ -141,10 +168,11 @@ Bot.prototype = {
 			//ignore opportunities if threatened
 			} else if (!isThreatened && impulse.threat < 0) {
 				this.move(impulse.x, impulse.y);
-				if (impulse.split && !this.pressingButton) {
-					this.pressingButton = true;
+				if (impulse.split && !pressingButton) {
+					attackSplitCooldown = 80;
+					pressingButton = true;
 					setTimeout(function() {
-						Bot.pressingButton = false;
+						pressingButton = false;
 					}, 80);
 					this.split();
 				}
@@ -164,10 +192,10 @@ Bot.prototype = {
 		if (isThreatened && currentEscapeDirection > -1) {
 			var escapeCoords = toCoords(currentEscapeDirection, myOrganism.ox, myOrganism.oy);
 			this.move(escapeCoords.x + myOrganism.ox, escapeCoords.y + myOrganism.oy);
-			if (shouldSplit && !this.pressingButton) {
-				this.pressingButton = true;
+			if (shouldSplit && !pressingButton) {
+				pressingButton = true;
 				setTimeout(function() {
-					Bot.pressingButton = false;
+					pressingButton = false;
 				}, 80);
 				this.split();
 			}
@@ -192,7 +220,7 @@ Bot.prototype = {
 				}
 			}
 			if (closestSkittle != null) {
-				this.impulses.push(new Impulse(-1,closestSkittle.ox, closestSkittle.oy, false, false, 'Skittle', '#00FF00'));
+				this.impulses.push(new Impulse(-1,closestSkittle.ox, closestSkittle.oy, closestSkittleDistance, false, false, 'Skittle', '#00FF00'));
 				this.move(closestSkittle.ox, closestSkittle.oy);
 
 				//TODO update chart
@@ -223,6 +251,7 @@ Bot.prototype = {
 		}
 	}
 };
+var lastLog = 101;
 
 //Check if enemy is a threat/opportunity
 function withinThreatRange(myOrganisms, organism, totalSize, dodgeDistance) {
@@ -237,6 +266,7 @@ function withinThreatRange(myOrganisms, organism, totalSize, dodgeDistance) {
 		return;
 	}
 
+	var impulseDistance = 999999;
 	for (var i=0;i<myOrganisms.length;i++) {
 		if (myOrganisms[i] == undefined || myOrganisms[i] == null) {
 			continue;
@@ -250,7 +280,7 @@ function withinThreatRange(myOrganisms, organism, totalSize, dodgeDistance) {
 			if (canBeEaten(myOrganisms[i], organism)) {
 
 				//Can he split to eat me? Would it be worth it to him?
-				if (!canBeSplitEaten(myOrganisms[i], organism) || totalSize * 4.5 < organism.size) {
+				if (!canBeSplitEaten(myOrganisms[i], organism) || totalSize * 6 < organism.size) {
 					threatDistance = consumptionDistance(myOrganisms[i], organism);
 					label = 'Consume Threat';
 				} else {
@@ -265,22 +295,26 @@ function withinThreatRange(myOrganisms, organism, totalSize, dodgeDistance) {
 			label = 'Virus Threat';
 		}
 
-		//Am I in danger of being eaten
-		var currentThreatDistance = distance(myOrganisms[i], organism);
-		if (organism.isVirus && currentThreatDistance < threatDistance + dodgeDistance / 4) {
+		if (threatDistance != 9999999) {
+			impulseDistance = threatDistance;
+			//Am I in danger of being eaten
+			var currentThreatDistance = distance(myOrganisms[i], organism);
+			if (organism.isVirus && currentThreatDistance < threatDistance + dodgeDistance / 4) {
 
-			//Can I safely eat this virus?
-			if (myOrganisms.length < 16) {
-				threat += myOrganisms[i].size * 0.6;
-			} else if (threat == 0) {
-				threat -= organism.size;
-			}
-		} else if (currentThreatDistance < threatDistance + dodgeDistance) {
-			threat += myOrganisms[i].size;
+				//Can I safely eat this virus?
+				if (myOrganisms.length < 16) {
+					threat += myOrganisms[i].size * 0.6;
+				} else if (threat == 0) {
+					threat -= organism.size;
+				}
+			} else if (currentThreatDistance < threatDistance + dodgeDistance) {
+				threat += myOrganisms[i].size;
 
-			//Should I split to avoid this?
-			if (currentThreatDistance < threatDistance + dodgeDistance / 2) {
-				shouldSplit = true;
+				//Should I split to avoid this?
+				if (currentThreatDistance < threatDistance + dodgeDistance && Math.abs(organism.dx) + Math.abs(organism.dy) > 120 && isTravelingTowardsMe(myOrganisms[i], organism)) {
+					console.log('splitting to escape from ' + organism.name);
+					shouldSplit = true;
+				}
 			}
 		}
 	}
@@ -296,6 +330,7 @@ function withinThreatRange(myOrganisms, organism, totalSize, dodgeDistance) {
 
 		//Find closest of my organisms
 		var shortestDistance = distance(organism, myOrganisms[0]);
+		impulseDistance = shortestDistance;
 		var closestOfMyOrganisms = myOrganisms[0];
 		for (var i=1;i<myOrganisms.length; i++) {
 			var currentOrganism = myOrganisms[i];
@@ -313,13 +348,15 @@ function withinThreatRange(myOrganisms, organism, totalSize, dodgeDistance) {
 		if (canBeEaten(organism, closestOfMyOrganisms)) {
 
 			//Can I split to eat it?
-			if (totalSize > 200 && canBeSplitEaten(organism, closestOfMyOrganisms)) {
+			if (organism.size * 5 > closestOfMyOrganisms.size && canBeSplitEaten(organism, closestOfMyOrganisms)) {
 
 				//Is it within range?
 				var splitDistance = calcSplitDistance(organism, closestOfMyOrganisms);
-				if (splitDistance + dodgeDistance * 2 > shortestDistance) {
+				if (attackSplitCooldown == 0 && splitDistance + dodgeDistance / 2 > shortestDistance) {
+					if (attackSplitWarmup != 1) {
+						attackSplitWarmup = 5;
+					}
 					threat -= organism.size + Math.min(0, Math.max(organism.size, (shortestDistance - splitDistance) * organism.size));
-
 					if (splitDistance > shortestDistance && myOrganisms.length < 16) {
 						shouldSplit = true;
 						label = 'Split to eat';
@@ -340,12 +377,27 @@ function withinThreatRange(myOrganisms, organism, totalSize, dodgeDistance) {
 		}
 	}
 	if (threat != 0) {
-		return new Impulse(threat, organism.x, organism.y, shouldShootMass, shouldSplit, label, color);
+		return new Impulse(threat, organism.x, organism.y, impulseDistance, shouldShootMass, shouldSplit, label, color);
 	} else {
 		return null;
 	}
 }
-
+function createEdgeThreat(organism, totalSize, dodgeDistance) {
+	if (organism.x < dodgeDistance) {
+		return new Impulse(totalSize, 0, organism.y, dodgeDistance, false, false, 'Left Threat', '#FF0000');
+	} else if (organism.y < dodgeDistance) {
+		return new Impulse(totalSize, organism.x, 0, dodgeDistance, false, false, 'Top Edge', '#FF0000');
+	} else if (organism.x > 11200 - dodgeDistance) {
+		return new Impulse(totalSize, 11200, organism.y, dodgeDistance, false, false, 'Right Edge', '#FF0000');
+	} else if (organism.y > 11200 - dodgeDistance) {
+		return new Impulse(totalSize, organism.x, 11200, dodgeDistance, false, false, 'Bottom Edge', '#FF0000');
+	}
+}
+function isTravelingTowardsMe(food, eater) {
+	var distanceX = eater.x - food.x;
+	var distanceY = eater.y - food.y;
+	return Math.abs(distanceX - eater.dx) < 10 && Math.abs(distanceY - eater.dy) < 10;
+}
 function sanitizeDegrees(degrees) {
 	while (degrees > 359) {
 		degrees -= 360;
@@ -367,12 +419,15 @@ function toCoords(degrees, x, y) {
 function distance(organism1, organism2) {
 	return Math.sqrt(Math.pow(organism1.ox - organism2.ox, 2) + Math.pow(organism1.oy - organism2.oy, 2));
 }
-function calcSplitDistance(myOrganism, organism) {
-	var splitDistance = organism.size * 3 - organism.size / 2000;
-	var splitSize = organism / 2;
-	var sizePercentage = myOrganism.size / splitSize;
-	var consumptionDistance = splitSize / 2 + myOrganism.size / 2 - sizePercentage * splitSize / 2;
-	return splitDistance + consumptionDistance;
+function calcSplitDistance(food, eater) {
+
+	var splitDistance = eater.size * (3.5 - eater.size / 800) + 250;
+	var splitSize = eater.size / 2;
+
+	var sizePercentage = food.size / splitSize;
+	var consumptionDistance = (splitSize / 2 + food.size / 2 - sizePercentage * splitSize / 2) * 2.1;
+	return splitDistance - consumptionDistance;
+
 }
 function consumptionDistance(myOrganism, otherOrganism) {
 	if ((otherOrganism.isVirus && !canBeEaten(otherOrganism, myOrganism))
@@ -380,19 +435,20 @@ function consumptionDistance(myOrganism, otherOrganism) {
 		return -1;
 	}
 	var sizePercentage = myOrganism.size / otherOrganism.size;
-	return (otherOrganism.size / 2 + myOrganism.size / 2 - sizePercentage * otherOrganism.size / 2) * 2;
+	return (otherOrganism.size / 2 + myOrganism.size / 2 - sizePercentage * otherOrganism.size / 2) * 2.1;
 }
 function canBeSplitEaten(food, eater) {
-	return food.size * 1.1 < eater.size / 2;
+	return food.size * 1.05 < eater.size / 2;
 }
 function canBeEaten(food, eater) {
-	return food.size * 1.1 < eater.size;
+	return food.size * 1.15 < eater.size;
 }
 
-var Impulse = function(threat,x,y,shootMass,split, name, color) {
+var Impulse = function(threat,x,y, threatDistance, shootMass,split, name, color) {
 	this.threat = threat;
 	this.x = x;
 	this.y = y;
+	this.threatDistance = threatDistance;
 	this.shootMass = shootMass;
 	this.split = split;
 	this.label=name;
@@ -402,6 +458,7 @@ Impulse.prototype = {
 	threat: 0,
 	x: 0,
 	y: 0,
+	threatDistance: 999999,
 	shootMass: false,
 	split: false,
 	name: 'Idling',
