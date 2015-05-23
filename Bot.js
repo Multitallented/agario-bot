@@ -9,13 +9,11 @@ var pressingButton = window.pressingButton = false;
 var attackSplitCooldown = 0;
 var attackSplitWarmup = -1;
 var threatCooldown = 0;
-var threatLog = 0;
-var preEatLog = 0;
-var eatLog = 0;
 var lastEscapeVector = 0;
 var lastImpulse = "";
 var closestEnemy = 999999;
 var closestEnemySize = 10;
+var closestEnemyName = "";
 var lastSize = 10;
 Bot.prototype = {
 	impulses: [],
@@ -27,6 +25,7 @@ Bot.prototype = {
 	scoreHistory:[],
 	dodgeDistance: 200,
 	maxThreatCooldown: 40,
+	otherOrganisms: [],
 	possibleImpulses:[
 		{
 			value: 1,
@@ -100,7 +99,7 @@ Bot.prototype = {
 				]);
 
 				console.log("DEAD x_X");
-				console.log("Closest Enemy " + closestEnemy + "(" + closestEnemySize + ")" + lastSize + "(" + this.dodgeDistance + ")");
+				console.log("Closest Enemy " + closestEnemyName + Math.floor(closestEnemy) + "(" + Math.floor(closestEnemySize) + ")" + Math.floor(lastSize) + "(" + Math.floor(this.dodgeDistance) + ")");
 				console.log("Score",~~(this.scoreHistory[this.scoreHistory.length-1]/100))
 				console.log("Time spent alive",(Date.now()-this.lastStateChangeDate.getTime())/60000,"mins")
 				this.scoreHistory=[];
@@ -138,8 +137,8 @@ Bot.prototype = {
 
 
 		this.impulses=[];
-		var myOrganism=getGeneralOrganism(myOrganisms, this.totalSize),
-			otherOrganisms=organisms.filter(function(organism){
+		var myOrganism=getGeneralOrganism(myOrganisms, this.totalSize);
+		var otherOrganisms=organisms.filter(function(organism){
 				if(organism.x2){
 					organism.dx=organism.x-organism.x2
 				}
@@ -148,7 +147,7 @@ Bot.prototype = {
 				}
 				organism.x2=organism.x;
 				organism.y2=organism.y;
-				return myOrganisms.indexOf(organism)==-1
+				return myOrganisms.indexOf(organism)==-1;
 			});
 		var skittles = otherOrganisms.filter(function(organism) {
 			return organism.name == "" && !organism.isVirus && organism.size < 15;
@@ -156,11 +155,10 @@ Bot.prototype = {
 		otherOrganisms = otherOrganisms.filter(function(organism) {
 			return organism.size > 14;
 		});
+		this.otherOrganisms = otherOrganisms;
 		if (myOrganism == undefined || myOrganism == null) {
 			return;
 		}
-
-
 		if (attackSplitCooldown > 0) {
 			attackSplitCooldown--;
 		}
@@ -169,15 +167,6 @@ Bot.prototype = {
 		}
 		if (threatCooldown > 0) {
 			threatCooldown--;
-		}
-		if (preEatLog > 0) {
-			preEatLog--;
-		}
-		if (eatLog > 0) {
-			eatLog--;
-		}
-		if (threatLog > 0) {
-			threatLog--;
 		}
 
 		//Find largest size
@@ -188,27 +177,83 @@ Bot.prototype = {
 			this.largestSelf = Math.max(this.largestSelf, myOrganisms[i].size);
 		}
 		lastSize = myOrganisms[0].size;
-		this.dodgeDistance = 30 * 100 / this.largestSelf;
-		this.maxThreatCooldown = Math.floor(Math.max(Math.min(25 * this.largestSelf / 100, 20), 50));
+		largestMass = getMass(this.largestSelf);
+		totalMass = getMass(this.totalSize);
+		var massString = 'Total Mass: ' + Math.floor(totalMass) + "(" + Math.floor(myOrganism.size) + ")";
+		massString += " " + (organisms.length - skittles.length - myOrganisms.length - otherOrganisms.length);
+		$massStat.text(massString);
+		if(totalMass > 100) {
+			this.dodgeDistance = getRadius(this.totalSize) * 2;
+		} else {
+			this.dodgeDistance = getRadius(this.totalSize) * 3;
+		}
+		$dodgeStat.text('Dodge Distance: ' + Math.floor(this.dodgeDistance));
+		this.maxThreatCooldown = Math.floor(Math.min(Math.max(25 * largestMass / 100, 20), 50));
+		$runCooldown.text('Run Cooldown: ' + this.maxThreatCooldown);
 
 		//Can I split safely to eat someone?
 		var safeSplit = true;
 		closestEnemy = 999999;
+		var miscStatString = "";
 		for (var i=0;i<otherOrganisms.length; i++) {
-			if (this.totalSize * 6 < otherOrganisms[i].size) {
+			var enemyMass = getMass(otherOrganisms[i].size);
+			if (totalMass * 6 < enemyMass) {
+				miscStatString += otherOrganisms[i].name + "(<span style='color: green;'>" + Math.floor(enemyMass) + "</span>) ";
+				var consumeDistance = consumptionDistance(myOrganism, otherOrganisms[i]);
+				if (currDistance < consumeDistance && canBeEaten(myOrganism, otherOrganisms[i])) {
+					miscStatString += " : <span style='color: red;'>" + Math.floor(consumeDistance) + "</span>";
+				} else {
+					miscStatString += " : " + Math.floor(consumeDistance);
+				}
+				miscStatString += "<br>";
 				continue;
 			}
+			var currentName = otherOrganisms[i].name;
+			if (currentName == '') {
+				currentName = "an unnamed cell";
+			}
+			if (canBeEaten(myOrganism, otherOrganisms[i])) {
+				miscStatString += "<span style='color: red;'>" + currentName + "</span>(" + Math.floor(enemyMass) + ") ";
+			} else {
+				miscStatString += currentName + "(" + Math.floor(enemyMass) + ") ";
+			}
 			var currDistance = distance(otherOrganisms[i], myOrganism);
+			miscStatString += Math.floor(currDistance);
 			if (currDistance < closestEnemy) {
 				closestEnemy = currDistance;
-				closestEnemySize = otherOrganisms[i].size;
+				closestEnemySize = enemyMass;
 			}
-			var incomingSplitDistance = calcSplitDistance({size: this.totalSize / myOrganisms.length}, {size: otherOrganisms[i].size * 2});
+			var consumeDistance = consumptionDistance(myOrganism, otherOrganisms[i]);
+			if (currDistance < consumeDistance && canBeEaten(myOrganism, otherOrganisms[i])) {
+				miscStatString += " : <span style='color: red;'>" + Math.floor(consumeDistance) + "</span>";
+			} else {
+				miscStatString += " : " + Math.floor(consumeDistance);
+			}
+			var incomingSplitDistance = calcSplitDistance(myOrganism, otherOrganisms[i]);
+			if (currDistance < incomingSplitDistance && canBeSplitEaten(myOrganism, otherOrganisms[i])) {
+				miscStatString += " : <span style='color: red;'>" + Math.floor(incomingSplitDistance) + "</span>";
+			} else {
+				miscStatString += " : " + Math.floor(incomingSplitDistance);
+			}
 			if (incomingSplitDistance > currDistance + this.dodgeDistance) {
 				safeSplit = false;
 				break;
 			}
+			miscStatString += "<br>";
 		}
+		var secondMiscStatString = "";
+		for (var i=0; i<organisms.length; i++) {
+			if (organisms[i].size < 15) {
+				continue;
+			}
+			var currentName = organisms[i].name;
+			if (currentName == '') {
+				currentName = 'an unnamed cell';
+			}
+			secondMiscStatString += "Cell: <span style='color: blue;'>" + currentName + "</span><br>";
+		}
+		$secondMiscStat.html(secondMiscStatString);
+		$miscStat.html(miscStatString);
 
 		//Find all immediate threats/opportunities
 		for (var i=0;i<otherOrganisms.length;i++) {
@@ -291,13 +336,9 @@ Bot.prototype = {
 
 		//Execute escape manuevers if threatened
 		if (threatCount > 0) {
-			if (threatLog == 19) {
-				console.log("Escape Vector Calc: " + currentEscapeDirection + ", " + absoluteTotalThreat +
-					" = " + sanitizeDegrees(currentEscapeDirection / absoluteTotalThreat + 180));
-			}
 			currentEscapeDirection = sanitizeDegrees(currentEscapeDirection / absoluteTotalThreat + 180);
 
-			if (absoluteTotalThreat > 1) {
+			if (absoluteTotalThreat > 1 && this.impulses[0].label != 'Virus Threat') {
 				lastEscapeVector = currentEscapeDirection;
 				threatCooldown = this.maxThreatCooldown;
 			}
@@ -396,6 +437,39 @@ Bot.prototype = {
 			ctx.lineTo(escapeCoords.x, escapeCoords.y);
 			ctx.stroke();
 		}
+
+		//Draw dodgeDistance
+		// var dodgeCoords = toCoords(15, myOrganism.ox, myOrganism.oy, getRadius(myOrganism.size) + this.dodgeDistance);
+		// ctx.beginPath();
+		// ctx.strokeStyle = 'black';
+		// ctx.moveTo(myOrganism.ox,myOrganism.oy);
+		// ctx.lineTo(dodgeCoords.x, dodgeCoords.y);
+		// ctx.stroke();
+
+		if (this.otherOrganisms != undefined) {
+			for (var i=0; i<this.otherOrganisms.length; i++) {
+				var currentOrganism = this.otherOrganisms[i];
+				if (currentOrganism == undefined || currentOrganism.isVirus) {
+					continue;
+				}
+				//Draw consumption distance
+				if (canBeSplitEaten(myOrganism, currentOrganism)) {
+					var consumptionCoords = toCoords(toDegrees(myOrganism.ox, myOrganism.oy, currentOrganism.ox, currentOrganism.oy), myOrganism.ox, myOrganism.oy, consumptionDistance(myOrganism, currentOrganism));
+					ctx.beginPath();
+					ctx.strokeStyle = 'cyan';
+					ctx.moveTo(myOrganism.ox,myOrganism.oy);
+					ctx.lineTo(consumptionCoords.x, consumptionCoords.y);
+					ctx.stroke();
+				} else if (canBeEaten(myOrganism, currentOrganism)) {
+					var splitCoords = toCoords(toDegrees(myOrganism.ox, myOrganism.oy, currentOrganism.ox, currentOrganism.oy), myOrganism.ox, myOrganism.oy, calcSplitDistance(myOrganism, currentOrganism));
+					ctx.beginPath();
+					ctx.strokeStyle = 'pink';
+					ctx.moveTo(myOrganism.ox,myOrganism.oy);
+					ctx.lineTo(splitCoords.x, splitCoords.y);
+					ctx.stroke();
+				}
+			}
+		}
 	}
 };
 var lastLog = 101;
@@ -429,7 +503,7 @@ function withinThreatRange(myOrganisms, organism, totalSize, dodgeDistance, safe
 			if (canBeEaten(myOrganisms[i], organism)) {
 
 				//Can he split to eat me? Would it be worth it to him?
-				if (!canBeSplitEaten(myOrganisms[i], organism) || totalSize * 6 < organism.size) {
+				if (!canBeSplitEaten(myOrganisms[i], organism) || getMass(totalSize) * 6 < getMass(organism.size)) {
 					threatDistance = consumptionDistance(myOrganisms[i], organism);
 					label = 'Consume Threat ' + organism.name;
 					highPriority += (threatDistance - currDistance) / threatDistance;
@@ -462,17 +536,12 @@ function withinThreatRange(myOrganisms, organism, totalSize, dodgeDistance, safe
 
 				//Can I safely eat this virus?
 				if (myOrganisms.length < 16) {
-					threat += myOrganisms[i].size * 0.6 * highPriority;
+					threat += getMass(myOrganisms[i].size) * 0.6 * highPriority;
 				} else if (threat == 0) {
-					threat -= organism.size;
+					threat -= getMass(organism.size);
 				}
 			} else if (currentThreatDistance < threatDistance + dodgeDistance) {
-				threat += myOrganisms[i].size * highPriority;
-				if (threatLog < 1) {
-					console.log(label + " " + threat + ":" + highPriority + ":" + (Math.abs(organism.dx) + Math.abs(organism.dy))
-					);
-					threatLog = 20;
-				}
+				threat += getMass(myOrganisms[i].size) * highPriority;
 
 				//Should I split to avoid this?
 				if (currentThreatDistance < threatDistance + dodgeDistance && Math.abs(organism.dx) + Math.abs(organism.dy) > 50 && isTravelingTowardsMe(myOrganisms[i], organism)) {
@@ -512,7 +581,7 @@ function withinThreatRange(myOrganisms, organism, totalSize, dodgeDistance, safe
 		if (canBeEaten(organism, closestOfMyOrganisms)) {
 
 			//Can I split to eat it?
-			if (safeSplit && organism.size * 5 > closestOfMyOrganisms.size && canBeSplitEaten(organism, closestOfMyOrganisms)) {
+			if (safeSplit && getMass(organism.size) * 5 > getMass(closestOfMyOrganisms.size) && canBeSplitEaten(organism, closestOfMyOrganisms)) {
 
 				//Is it within range?
 				var splitDistance = calcSplitDistance(organism, closestOfMyOrganisms);
@@ -563,7 +632,15 @@ function withinThreatRange(myOrganisms, organism, totalSize, dodgeDistance, safe
 		return null;
 	}
 }
-
+function getMass(size) {
+	return Math.pow(size, 2) / 100;
+}
+function getDiameter(size) {
+	return size * 2;
+}
+function getRadius(size) {
+	return size;
+}
 function getGeneralOrganism(myOrganisms, totalSize) {
 	var myOrganism = {ox: 0, oy: 0, size: totalSize};
 	for (var i=0; i< myOrganisms.length; i++) {
@@ -575,25 +652,21 @@ function getGeneralOrganism(myOrganisms, totalSize) {
 	return myOrganism;
 }
 function createEdgeThreat(organism, totalSize, dodgeDistance) {
-	if (organism.ox < dodgeDistance + totalSize) {
-		return new Impulse(totalSize, 0, organism.oy, dodgeDistance + totalSize, false, false, 'Left Edge', '#FF0000');
-	} else if (organism.oy < dodgeDistance + totalSize) {
-		return new Impulse(totalSize, organism.ox, 0, dodgeDistance + totalSize, false, false, 'Top Edge', '#FF0000');
-	} else if (organism.ox > 11200 - dodgeDistance - totalSize) {
-		return new Impulse(totalSize, 11200, organism.oy, dodgeDistance + totalSize, false, false, 'Right Edge', '#FF0000');
-	} else if (organism.oy > 11200 - dodgeDistance - totalSize) {
-		return new Impulse(totalSize, organism.ox, 11200, dodgeDistance + totalSize, false, false, 'Bottom Edge', '#FF0000');
+	var diameter = getDiameter(totalSize);
+	if (organism.ox < dodgeDistance + diameter) {
+		return new Impulse(diameter, 0, organism.oy, dodgeDistance + diameter, false, false, 'Left Edge', '#FF0000');
+	} else if (organism.oy < dodgeDistance + diameter) {
+		return new Impulse(diameter, organism.ox, 0, dodgeDistance + diameter, false, false, 'Top Edge', '#FF0000');
+	} else if (organism.ox > 11200 - dodgeDistance - diameter) {
+		return new Impulse(diameter, 11200, organism.oy, dodgeDistance + diameter, false, false, 'Right Edge', '#FF0000');
+	} else if (organism.oy > 11200 - dodgeDistance - diameter) {
+		return new Impulse(diameter, organism.ox, 11200, dodgeDistance + diameter, false, false, 'Bottom Edge', '#FF0000');
 	}
 }
 function isTravelingTowardsMe(food, eater) {
 	var tolerance = 30;
 	var enemyVector = toDegrees(eater.dx, eater.dy, eater.ox, eater.oy);
 	var enemyDirection = toDegrees(food.ox, food.oy, eater.ox, eater.oy);
-	if (threatLog == 20) {
-		console.log("vector compare: " + enemyVector + ", " + enemyDirection + " = " +
-			(Math.abs(enemyVector - enemyDirection) < tolerance || Math.abs(Math.min(enemyVector, enemyDirection) + 360 - Math.max(enemyDirection, enemyVector)) < tolerance));
-		threatLog--;
-	}
 	return Math.abs(enemyVector - enemyDirection) < tolerance || Math.abs(Math.min(enemyVector, enemyDirection) + 360 - Math.max(enemyDirection, enemyVector)) < tolerance;
 }
 function sanitizeDegrees(degrees) {
@@ -621,31 +694,32 @@ function distance(organism1, organism2) {
 	return Math.sqrt(Math.pow(organism1.ox - organism2.ox, 2) + Math.pow(organism1.oy - organism2.oy, 2));
 }
 function calcSplitDistance(food, eater) {
+	var eaterDiameter = getDiameter(eater.size);
+	var splitDistance = eaterDiameter * (3.5 - eaterDiameter / 800) + 250;
+	var splitSize = eaterDiameter / 2;
 
-	var splitDistance = eater.size * (3.5 - eater.size / 800) + 250;
-	var splitSize = eater.size / 2;
-
-	var sizePercentage = food.size / splitSize;
-	var consumptionDistance = (splitSize / 2 + food.size / 2 - sizePercentage * splitSize / 2) * 2.1;
+	var foodDiameter = getDiameter(food.size);
+	var sizePercentage = foodDiameter / splitSize;
+	var consumptionDistance = (splitSize / 2 + foodDiameter / 2 - sizePercentage * splitSize / 2) * 2.1;
 	return splitDistance - consumptionDistance;
 
 }
-function consumptionDistance(myOrganism, otherOrganism) {
-	if ((otherOrganism.isVirus && !canBeEaten(otherOrganism, myOrganism))
-			|| (otherOrganism.isVirus && !canBeEaten(myOrganism, otherOrganism))) {
+function consumptionDistance(food, eater) {
+	if ((eater.isVirus && !canBeEaten(eater, food))
+			|| (eater.isVirus && !canBeEaten(food, eater))) {
 		return -1;
 	}
-
-
-
-	var sizePercentage = myOrganism.size / otherOrganism.size;
-	return (otherOrganism.size / 2 + myOrganism.size / 2 - sizePercentage * otherOrganism.size / 1.5) * 2.3;
+	return getRadius(eater.size);
 }
 function canBeSplitEaten(food, eater) {
-	return food.size < eater.size / 2;
+	var foodMass = getMass(food.size);
+	var eaterMass = getMass(eater.size);
+	return foodMass * 1.15 < eaterMass / 2;
 }
 function canBeEaten(food, eater) {
-	return food.size * 1.15 < eater.size;
+	var foodMass = getMass(food.size);
+	var eaterMass = getMass(eater.size);
+	return foodMass * 1.15 < eaterMass;
 }
 function updateBehaviorChart(impulses, theBehaviorChart) {
 	for (var j=0; j<theBehaviorChart.segments.length; j++) {
@@ -725,6 +799,23 @@ var chart=new Chart(ctx).Line({labels:labels,datasets:[{
 		data:data2
 	}
 ]});
+var $statContainer = $('<div id="stat-container"></div>');
+$('body').append($statContainer);
+$statContainer.css('position','fixed');
+$statContainer.css('top', '220px');
+var $massStat = $('<h4 id="mass-stat"></h4>');
+$statContainer.append($massStat);
+var $dodgeStat = $('<h4 id="dodge-stat"></h4>');
+$statContainer.append($dodgeStat);
+var $runCooldown = $('<h4 id="run-cooldown-stat"></h4>');
+$statContainer.append($runCooldown);
+var $miscStat = $('<p id="misc-stat"></p>');
+$statContainer.append($miscStat);
+$miscStat.css('float', 'left');
+$miscStat.css('padding-top: 20px;');
+var $secondMiscStat = $('<p id="2-misc-stat"></p>');
+$statContainer.append($secondMiscStat);
+$secondMiscStat.css('float', 'left');
 
 var behaviorCanvas=$('<div style="position:fixed;width:100%;bottom:5px;text-align:center"><h4 id="behavior-char-title">Bot Behavior</h4><canvas id="behavior-canvas" width="250" height="100"></canvas></div>')
 $('body').append(behaviorCanvas)
