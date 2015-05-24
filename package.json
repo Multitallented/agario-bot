@@ -1,0 +1,28 @@
+{
+  "name": "agario-bot",
+  "version": "0.0.0",
+  "description": "A bot I created from a platform made by Lio (twitch.tv/gamerlio)",
+  "main": "Bot.js",
+  "dependencies": {
+    "gulp": "~3.8.11",
+    "gulp-concat": "~2.5.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/Multitallented/agario-bot.git"
+  },
+  "keywords": [
+    "Agario",
+    "Agar.io",
+    "bot"
+  ],
+  "author": "Multitallented",
+  "license": "MIT License",
+  "bugs": {
+    "url": "https://github.com/Multitallented/agario-bot/issues"
+  }
+}

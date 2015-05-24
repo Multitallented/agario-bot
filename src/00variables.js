@@ -1,0 +1,12 @@
+var runOnce = true;
+var pressingButton = window.pressingButton = false;
+var attackSplitCooldown = 0;
+var attackSplitWarmup = -1;
+var threatCooldown = 0;
+var lastEscapeVector = 0;
+var lastImpulse = "";
+var closestEnemy = 999999;
+var closestEnemySize = 10;
+var closestEnemyName = "";
+var lastSize = 10;
+var lastLog = 101;
