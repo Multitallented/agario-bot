@@ -1,7 +1,7 @@
-var Impulse = function(threat,x,y, threatDistance, shootMass,split, name, color) {
+var Impulse = function(threat,origin, target, threatDistance, shootMass,split, name, color) {
 	this.threat = threat;
-	this.x = x;
-	this.y = y;
+	this.origin = origin;
+	this.target = target;
 	this.threatDistance = threatDistance;
 	this.shootMass = shootMass;
 	this.split = split;
@@ -10,8 +10,8 @@ var Impulse = function(threat,x,y, threatDistance, shootMass,split, name, color)
 };
 Impulse.prototype = {
 	threat: 0,
-	x: 0,
-	y: 0,
+	target: null,
+	origin: null,
 	threatDistance: 999999,
 	shootMass: false,
 	split: false,

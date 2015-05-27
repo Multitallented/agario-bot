@@ -10,3 +10,11 @@ var closestEnemySize = 10;
 var closestEnemyName = "";
 var lastSize = 10;
 var lastLog = 101;
+
+//Christmas Tree initializer
+var otherOrganisms = [];
+var viruses = 		[  ];
+var enemies =      [    ];
+var skittles =    [      ];
+var impulses =   [        ];
+var afkMass =        [];

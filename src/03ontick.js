@@ -46,40 +46,15 @@ onTick: function (organisms, myOrganisms, score) {
 	this.currentState='alive';
 
 
-	this.impulses=[];
 	var myOrganism=getGeneralOrganism(myOrganisms, this.totalSize);
-	var otherOrganisms=organisms.filter(function(organism){
-			if(organism.x2){
-				organism.dx=organism.x-organism.x2
-			}
-			if(organism.y2){
-				organism.dy=organism.y-organism.y2
-			}
-			organism.x2=organism.x;
-			organism.y2=organism.y;
-			return myOrganisms.indexOf(organism)==-1;
-		});
-	var skittles = otherOrganisms.filter(function(organism) {
-		return organism.name == "" && !organism.isVirus && organism.size < 15;
-	});
-	otherOrganisms = otherOrganisms.filter(function(organism) {
-		return organism.size > 14;
-	});
-	this.otherOrganisms = otherOrganisms;
-	if (myOrganism == undefined || myOrganism == null) {
-		return;
-	}
-	if (attackSplitCooldown > 0) {
-		attackSplitCooldown--;
-	}
-	if (attackSplitWarmup > 0) {
-		attackSplitWarmup--;
-	}
-	if (threatCooldown > 0) {
-		threatCooldown--;
-	}
 
-	//Find largest size
+	filterArrays(myOrganisms, organisms);
+
+
+	checkCooldowns();
+
+	
+	impulses=[];
 	this.largestSelf = 10;
 	this.totalSize = 0;
 	for (var i=0;i<myOrganisms.length; i++) {

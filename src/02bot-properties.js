@@ -1,5 +1,4 @@
 Bot.prototype = {
-	impulses: [],
 	largestSelf: 10,
 	totalSize: 10,
 	lastStateChangeDate:null,
@@ -8,7 +7,6 @@ Bot.prototype = {
 	scoreHistory:[],
 	dodgeDistance: 200,
 	maxThreatCooldown: 40,
-	otherOrganisms: [],
 	threatEscapeVectors: [],
 	move:function(x,y){}, //overwrite these in main_out.js
 	split:function(){},
