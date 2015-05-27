@@ -1,32 +1,29 @@
+function getDirection(organism) {
+	return toDegrees(organism.ox, organism.oy, organism.dx, organism.dy);
+}
+function getSpeed(organism) {
+	return distance(organism, {ox: organism.dx, oy: organism.dy});
+}
+function getAngleDifference(angle1, angle2) {
+	var difference = Math.abs(angle1 - angle2);
+	return difference > 180 ? 360 - difference : difference;
+}
+function tooBigToWorry(food, eater) {
+	return food.mass * 6 < eater.mass;
+}
 function getMass(size) {
 	return Math.pow(size, 2) / 100;
 }
-function getDiameter(size) {
-	return size * 2;
-}
-function getRadius(size) {
-	return size;
-}
-function getGeneralOrganism(myOrganisms, totalSize) {
-	var myOrganism = {ox: 0, oy: 0, size: totalSize};
-	for (var i=0; i< myOrganisms.length; i++) {
-		myOrganism.ox += myOrganisms[i].ox;
-		myOrganism.oy += myOrganisms[i].oy;
-	}
-	myOrganism.ox = myOrganism.ox / myOrganisms.length;
-	myOrganism.oy = myOrganism.oy / myOrganisms.length;
-	return myOrganism;
-}
-function createEdgeThreat(organism, totalSize, dodgeDistance) {
-	var diameter = getDiameter(totalSize);
-	if (organism.ox < dodgeDistance + diameter) {
-		return new Impulse(getMass(totalSize) / 2, 0, organism.oy, dodgeDistance + diameter, false, false, 'Left Edge', '#FF0000');
-	} else if (organism.oy < dodgeDistance + diameter) {
-		return new Impulse(getMass(totalSize) / 2, organism.ox, 0, dodgeDistance + diameter, false, false, 'Top Edge', '#FF0000');
-	} else if (organism.ox > 11200 - dodgeDistance - diameter) {
-		return new Impulse(getMass(totalSize) / 2, 11200, organism.oy, dodgeDistance + diameter, false, false, 'Right Edge', '#FF0000');
-	} else if (organism.oy > 11200 - dodgeDistance - diameter) {
-		return new Impulse(getMass(totalSize) / 2, organism.ox, 11200, dodgeDistance + diameter, false, false, 'Bottom Edge', '#FF0000');
+function createEdgeThreat(myOrganism) {
+	var worryDistance = myOrganism.speed * 2;
+	if (myOrganism.ox < worryDistance) {
+		return new Impulse(999999, {name: 'Left Edge', ox: 0, oy: myOrganism.oy, dx: 0, dy: 0, mass: 999999}, myOrganism.organisms, myOrganism.ox, worryDistance, 180, 'Left Edge', '#FF0000');
+	} else if (myOrganism.oy < worryDistance) {
+		return new Impulse(999999, {name: 'Top Edge', ox: myOrganism.ox, oy: 0, dx: 0, dy: 0, mass: 999999}, myOrganism.organisms, myOrganism.oy, worryDistance, 270, 'Top Edge', '#FF0000');
+	} else if (myOrganism.ox > 11200 - worryDistance) {
+		return new Impulse(999999, {name: 'Right Edge', ox: 11200, oy: myOrganism.oy, dx: 0, dy: 0, mass: 999999}, myOrganism.organisms, 11200 - myOrganism.ox, worryDistance, 270, 'Right Edge', '#FF0000');
+	} else if (myOrganism.oy > 11200 - worryDistance) {
+		return new Impulse(999999, {name: 'Bottom Edge', ox: myOrganism.ox, oy: 11200, dx: 0, dy: 0, mass: 999999}, myOrganism.organisms, 11200 - myOrganism.oy, worryDistance, 270, 'Bottom Edge', '#FF0000');
 	}
 }
 function isTravelingTowardsMe(food, eater) {
@@ -44,9 +41,21 @@ function sanitizeDegrees(degrees) {
 	}
 	return degrees;
 }
-function toDegrees(x1,y1, x2, y2) {
-	var deltaX = x2 - x1;
-	var deltaY = y2 - y1;
+function getRelativeSpeed(food, eater) {
+	var foodDirection = toDegrees(food.ox, food.oy, eater.ox, eater.oy);
+	var relativeDirection = toDegrees(food.ox, food.oy, food.dx, food.dy);
+	var directionDifference = getAngleDifference(foodDirection, relativeDirection);
+	if (directionDifference == 90) {
+		return 0;
+	}
+	if (directionDifference > 90) {
+		return distance(food, {ox: food.dx, oy: food.dy}) * Math.cos(180 - directionDifference);
+	}
+	return distance(food, {ox: food.dx, oy: food.dy}) * Math.cos(directionDifference);
+}
+function toDegrees(baseX,baseY, x2, y2) {
+	var deltaX = x2 - baseX;
+	var deltaY = y2 - baseY;
 	var rad = Math.atan2(deltaY, deltaX); // In radians
 	return sanitizeDegrees(rad * (180 / Math.PI));
 }
@@ -58,6 +67,12 @@ function toCoords(degrees, x, y, multiplier) {
 }
 function distance(organism1, organism2) {
 	return Math.sqrt(Math.pow(organism1.ox - organism2.ox, 2) + Math.pow(organism1.oy - organism2.oy, 2));
+}
+function getSplitDistance(eater) {
+	return eater.size * (5 - eater.size / 400) + 250;
+}
+function getConsumeDistance(food, eater) {
+	return eater.size - food.size;
 }
 function calcSplitDistance(food, eater) {
 	var eaterDiameter = getDiameter(eater.size);
@@ -78,12 +93,8 @@ function consumptionDistance(food, eater) {
 	return getRadius(eater.size);
 }
 function canBeSplitEaten(food, eater) {
-	var foodMass = getMass(food.size);
-	var eaterMass = getMass(eater.size);
-	return foodMass * 1.15 < eaterMass / 2;
+	return food.mass * 1.15 < eater.mass / 2;
 }
 function canBeEaten(food, eater) {
-	var foodMass = getMass(food.size);
-	var eaterMass = getMass(eater.size);
-	return eaterMass - foodMass > 10 && foodMass * 1.15 < eaterMass;
+	return eater.mass - food.mass > 10 && food.mass * 1.15 < eater.mass;
 }
