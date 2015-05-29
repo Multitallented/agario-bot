@@ -73,7 +73,7 @@ function getSplitDistance(eater) {
 	return eater.size * (5 - eater.size / 400) + 250;
 }
 function getConsumeDistance(food, eater) {
-	return eater.size - food.size;
+	return eater.size;
 }
 function canBeSplitEaten(food, eater) {
 	return food.mass * 1.15 < eater.mass / 2;

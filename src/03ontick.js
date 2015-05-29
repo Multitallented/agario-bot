@@ -12,7 +12,7 @@ tick: function(organisms, myOrganisms, score) {
 
 	var myOrganism = new MyOrganism(myOrganisms);
 	$massStat.text('Size: ' + Math.floor(myOrganism.size) + ':' + Math.floor(myOrganism.mass) + '(' + Math.floor(this.runCooldown) + ')');
-	$dodgeStat.text('Speed: ' + Math.floor(myOrganism.speed) + ' { ' + Math.floor(myOrganism.dx) + ' , ' + Math.floor(myOrganism.dy) + ' } (' + Math.floor(myOrganism.direction) + ')');
+	$dodgeStat.text('Speed: (' + Math.floor(myOrganism.direction) + ')' + Math.floor(myOrganism.speed) + ' { ' + Math.floor(myOrganism.dx) + ' , ' + Math.floor(myOrganism.dy) + ' }');
 
 
 	if (this.attackSplitCooldown > 0) {
@@ -99,24 +99,55 @@ tick: function(organisms, myOrganisms, score) {
 	}
 	this.impulses = tempArray;
 
-	printImpulseLog(this.impulses, this);
 
 	if (this.immediateThreats) {
 		this.runCooldown = 40;
 	}
 
+	//sort by direction
+	if (this.impulses.length > 1) {
+		this.impulses.sort(function(a, b) {
+			return b.direction - a.direction;
+		});
+	}
+	printImpulseLog(this.impulses, this);
+
 	//Find vector and split or shoot
-	var moveDirection = 0;
 	var shouldSplit = false;
 	var shouldShoot = false;
 	var opportunity = null;
 	var moveDistance = 0;
-	var averageNumber = 0;
+	var moveDirection = 0;
+	var gap = -1;
 	for (var i = 0; i < this.impulses.length; i++) {
 		var impulse = this.impulses[i];
 
-		averageNumber++;
-		moveDirection += impulse.direction;
+		if (this.impulses.length == 1) {
+			if (impulse.threat > -1) {
+				moveDirection = sanitizeDegrees(impulse.direction + 180);
+			} else {
+				moveDirection = impulse.direction;
+			}
+		} else {
+			var currentGap = -1;
+			if (i==0) {
+				currentGap = getAngleDifference(impulse.direction, this.impulses[this.impulses.length - 1].direction);
+			} else {
+				currentGap = getAngleDifference(impulse.direction, this.impulses[i-1].direction);
+			}
+			var isNewGap = currentGap == -1 ||
+				(impulse.threat > -1 && currentGap > gap) ||
+				(impulse.threat < 0 && currentGap < gap);
+			if (isNewGap) {
+				gap = currentGap;
+				if (i==0) {
+					moveDirection = sanitizeDegrees(this.impulses[this.impulses.length - 1].direction + currentGap / 2);
+				} else {
+					moveDirection = sanitizeDegrees(impulse.direction + currentGap / 2);
+				}
+			}
+		}
+
 		moveDistance = impulse.distance;
 
 
@@ -129,18 +160,18 @@ tick: function(organisms, myOrganisms, score) {
 		}
 
 		//defensive split
-		if (impulse.worryDistance > impulse.distance && getAngleDifference(impulse.direction, impulse.enemy.direction) < 15 && impulse.enemy.speed > 40) {
+		if (impulse.worryDistance > impulse.distance &&
+			getAngleDifference(impulse.direction, impulse.enemy.direction) < 15 &&
+			impulse.enemy.speed > 40) {
 			shouldSplit = true;
 		}
 	}
-	if (this.impulses.length != 0) {
-		moveDirection = moveDirection / averageNumber;
 
-		if (this.impulses[0].threat > 0) {
-			moveDirection += 180;
-			moveDirection = sanitizeDegrees(moveDirection);
-			moveDistance = 400;
-		}
+	//TODO adjust for multiple skittles
+
+
+	if (this.impulses.length != 0 && this.impulses[0].threat > 0) {
+		moveDistance = 400;
 	}
 
 	var moveCoords = toCoords(moveDirection, myOrganism.ox, myOrganism.oy, moveDistance);

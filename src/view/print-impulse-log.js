@@ -1,16 +1,43 @@
 function printImpulseLog(impulses, bot) {
 	var miscStatString = "";
-	var totalDirection = 0;
-	var averageNumber = 0;
-	for (var i = 0; i < impulses.length; i++) {
+	var moveDistance = 0;
+	var moveDirection = 0;
+	var gap = -1;
+	for (var i = 0; i <impulses.length; i++) {
 		var impulse = impulses[i];
-		totalDirection += impulse.direction;
-		averageNumber++;
+
+		if (impulses.length == 1) {
+			if (impulse.threat > -1) {
+				moveDirection = sanitizeDegrees(impulse.direction + 180);
+			} else {
+				moveDirection = impulse.direction;
+			}
+		} else {
+			var currentGap = -1;
+			if (i == 0) {
+				currentGap = getAngleDifference(impulse.direction, impulses[impulses.length - 1].direction);
+			} else {
+				currentGap = getAngleDifference(impulse.direction, impulses[i - 1].direction);
+			}
+			var isNewGap = currentGap == -1 ||
+				(impulse.threat > -1 && currentGap > gap) ||
+				(impulse.threat < 0 && currentGap < gap);
+			if (isNewGap) {
+				gap = currentGap;
+				if (i == 0) {
+					moveDirection = sanitizeDegrees(impulses[impulses.length - 1].direction + currentGap / 2);
+				} else {
+					moveDirection = sanitizeDegrees(impulse.direction + currentGap / 2);
+				}
+			}
+		}
+
+		moveDistance = impulse.distance;
 	}
-	miscStatString += 'Total Direction: ' + Math.floor(totalDirection) +
-		', Number of Impulses: ' + averageNumber +
-		', Outcome: ' + Math.floor(totalDirection / averageNumber) +
-		'<br>';
+	miscStatString += 'Direction: ' + Math.floor(moveDirection) +
+	', Number: ' + impulses.length +
+	', Gap: ' + Math.floor(gap) +
+	'<br>';
 
 	for (var i = 0; i < impulses.length; i++) {
 		var impulse = impulses[i];
