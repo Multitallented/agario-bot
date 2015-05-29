@@ -9,6 +9,7 @@ Ai.prototype = {
 	maxThreatCooldown: 40,
 	attackSplitCooldown: 0,
 	runCooldown: 0,
+	immediateThreatCooldown: 0,
 	currentState: '',
 	organismState: {},
 	myOrganism: {},

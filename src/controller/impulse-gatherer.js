@@ -59,7 +59,7 @@ function gatherImpulses(organismState, myOrganism, bot) {
 			} else if (splitOpportunity && !tooBigToWorry(currentEnemy, currentFriendly)) {
 				currentOpportunityDistance += getSplitDistance(currentFriendly) + getConsumeDistance(currentEnemy, currentFriendly);
 			} else if (consumeThreat) {
-				currentWorryDistance += getConsumeDistance(currentFriendly, currentEnemy) + currentFriendly.speed * 4;
+				currentWorryDistance += getConsumeDistance(currentFriendly, currentEnemy) + currentFriendly.speed * 2 + 60;
 			} else if (consumeOpportunity) {
 				currentOpportunityDistance += getConsumeDistance(currentEnemy, currentFriendly);
 			}
@@ -141,7 +141,7 @@ function gatherImpulses(organismState, myOrganism, bot) {
 			if (currentDistance < closestDistance) {
 				closestDistance = currentDistance;
 				direction = toDegrees(currentFriendly.ox, currentFriendly.oy, currentVirus.ox, currentVirus.oy);
-				worryDistance = getConsumeDistance(currentVirus, currentFriendly) + relativeDistance + currentFriendly.speed * 2;
+				worryDistance = getConsumeDistance(currentVirus, currentFriendly) + relativeDistance + currentFriendly.speed + 15;
 			}
 		}
 

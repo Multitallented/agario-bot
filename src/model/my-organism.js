@@ -38,7 +38,7 @@ var MyOrganism = function(myOrganisms) {
 	this.dx = largestOrganism.dx;
 	this.dy = largestOrganism.dy;
 	this.speed = getSpeed(this);
-	this.direction = getDirection(this);
+	this.direction = getDirection({ox: largestOrganism.ox, oy: largestOrganism.oy, dx: largestOrganism.dx, dy: largestOrganism.dy});
 
 	var farthest = -1;
 	var farthestSize = 0;

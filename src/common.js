@@ -70,7 +70,7 @@ function distance(organism1, organism2) {
 	return Math.sqrt(Math.pow(organism1.ox - organism2.ox, 2) + Math.pow(organism1.oy - organism2.oy, 2));
 }
 function getSplitDistance(eater) {
-	return eater.size * (5 - eater.size / 400) + 250;
+	return eater.size * (3 - eater.size / 400) + 350;
 }
 function getConsumeDistance(food, eater) {
 	return eater.size;

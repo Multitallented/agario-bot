@@ -21,6 +21,9 @@ tick: function(organisms, myOrganisms, score) {
 	if (this.runCooldown > 0) {
 		this.runCooldown--;
 	}
+	if (this.immediateThreatCooldown > 0) {
+		this.immediateThreatCooldown--;
+	}
 
 	this.organismState = organismState;
 	this.myOrganism = myOrganism;
@@ -69,6 +72,13 @@ tick: function(organisms, myOrganisms, score) {
 			return 1;
 		}
 
+		if (a.threat == 999999) {
+			return -1;
+		}
+		if (b.threat == 999999) {
+			return 1;
+		}
+
 		return a.worryDistance - b.worryDistance;
 	});
 
@@ -78,7 +88,7 @@ tick: function(organisms, myOrganisms, score) {
 	for (var i=0; i< this.impulses.length; i++) {
 		var impulse = this.impulses[i];
 
-		if (this.immediateThreats && impulse.worryDistance < impulse.distance) {
+		if (this.immediateThreats && impulse.worryDistance < impulse.distance && impulse.threat != 999999) {
 			continue;
 		}
 
@@ -86,7 +96,7 @@ tick: function(organisms, myOrganisms, score) {
 			continue;
 		}
 
-		if (this.threatened && impulse.threat < 0 && this.runCooldown > 0) {
+		if (this.threatened && impulse.threat < 1 && this.runCooldown > 0) {
 			continue;
 		}
 		if (previousThreat < 0) {
@@ -122,6 +132,8 @@ tick: function(organisms, myOrganisms, score) {
 	for (var i = 0; i < this.impulses.length; i++) {
 		var impulse = this.impulses[i];
 
+
+
 		if (this.impulses.length == 1) {
 			if (impulse.threat > -1) {
 				moveDirection = sanitizeDegrees(impulse.direction + 180);
@@ -131,11 +143,11 @@ tick: function(organisms, myOrganisms, score) {
 		} else {
 			var currentGap = -1;
 			if (i==0) {
-				currentGap = getAngleDifference(impulse.direction, this.impulses[this.impulses.length - 1].direction);
+				currentGap = (360 + impulse.direction) - this.impulses[this.impulses.length - 1].direction;
 			} else {
-				currentGap = getAngleDifference(impulse.direction, this.impulses[i-1].direction);
+				currentGap = impulse.direction - this.impulses[i-1].direction;
 			}
-			var isNewGap = currentGap == -1 ||
+			var isNewGap = gap == -1 ||
 				(impulse.threat > -1 && currentGap > gap) ||
 				(impulse.threat < 0 && currentGap < gap);
 			if (isNewGap) {
