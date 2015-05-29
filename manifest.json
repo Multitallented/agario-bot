@@ -1,6 +1,6 @@
 {
 	"manifest_version":2,
-	"name":"Leo's Agario Bot",
+	"name":"Multi's Agario Bot",
 	"version":"1",
 	"page_action":{},
 	"content_scripts": [

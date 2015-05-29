@@ -1,6 +1,6 @@
 var Impulse = function(threat, enemy, target, distance, worryDistance, direction, label, color) {
 	this.threat = threat;
-	this.enemy = target;
+	this.enemy = enemy;
 	this.target = target;
 	this.distance = distance;
 	this.worryDistance = worryDistance;

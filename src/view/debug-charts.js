@@ -51,17 +51,22 @@ var $statContainer = $('<div id="stat-container"></div>');
 $('body').append($statContainer);
 $statContainer.css('position','fixed');
 $statContainer.css('top', '220px');
+$statContainer.css('color', 'white');
 
 var $massStat = $('<h4 id="mass-stat"></h4>');
+$massStat.css('color', 'white');
 $statContainer.append($massStat);
 
 var $dodgeStat = $('<h4 id="dodge-stat"></h4>');
+$dodgeStat.css('color', 'white');
 $statContainer.append($dodgeStat);
 
 var $runCooldown = $('<h4 id="run-cooldown-stat"></h4>');
+$runCooldown.css('color', 'white');
 $statContainer.append($runCooldown);
 
 var $miscStat = $('<p id="misc-stat"></p>');
+$miscStat.css('color', 'white');
 $statContainer.append($miscStat);
 $miscStat.css('float', 'left');
 

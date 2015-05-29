@@ -1,5 +1,8 @@
 var OrganismState = function(myOrganisms, organisms) {
-	this.otherOrganisms=organisms.filter(function(organism){
+	this.otherOrganisms=organisms;
+
+	for(var i=0; i<this.otherOrganisms.length; i++) {
+		var organism = this.otherOrganisms[i];
 		if(organism.x2){
 			organism.dx=organism.x-organism.x2
 		}
@@ -11,16 +14,21 @@ var OrganismState = function(myOrganisms, organisms) {
 		organism.mass = getMass(organism.size);
 		organism.direction = getDirection(organism);
 		organism.speed = getSpeed(organism);
-		return myOrganisms.indexOf(organism)==-1;
+	}
+	var skittles = this.skittles = this.otherOrganisms.filter(function(organism) {
+		if (organism.mass < 3) {
+			organism.name = "skittle";
+		}
+		return organism.mass < 3;
 	});
-	this.skittles = otherOrganisms.filter(function(organism) {
-		return organism.name == "" && !organism.isVirus && organism.size < 15 && organism.dx == 0;
-	});
-	this.viruses = otherOrganisms.filter(function(organism) {
+	this.viruses = this.otherOrganisms.filter(function(organism) {
+		if (organism.isVirus) {
+			organism.name = "virus";
+		}
 		return organism.isVirus;
 	});
-	this.enemies = otherOrganisms.filter(function(organism) {
-		return !organism.isVirus && skittles.indexOf(organism)==-1;
+	this.enemies = this.otherOrganisms.filter(function(organism) {
+		return !organism.isVirus && organism.mass > 3;
 	});
 	this.organisms = organisms;
 };

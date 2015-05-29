@@ -1,0 +1,37 @@
+#score-chart {
+	position:fixed;
+	top:0px;
+}
+
+#ai-intuition {
+	position:fixed;
+	width:100%;
+	bottom:5px;
+	text-align:center;
+}
+
+#ip-address {
+	position:fixed;
+	width:100%;
+	text-align:center;
+	color:#FFF;
+	top:0px;
+}
+
+#heat-map-div, #mini-map {
+	text-align: center;
+	position:fixed;
+	bottom:5px;
+	right:5px;
+}
+
+#heat-map {
+	border: 2px solid #FFFFFF;
+}
+
+h4 {
+	color: #EEE !important;
+}
+#stat-container, #mass-stat, #dodge-stat, #run-cooldown-stat {
+	color: white;
+}

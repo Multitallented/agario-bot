@@ -55,11 +55,11 @@ function gatherImpulses(organismState, myOrganism, bot) {
 				currentWorryDistance = currentWorryDistance * -1;
 			}
 			if (splitThreat && !tooBigToWorry(currentFriendly, currentEnemy)) {
-				currentWorryDistance += getSplitDistance(currentEnemy) + getConsumeDistance(currentFriendly, currentEnemy);
+				currentWorryDistance += getSplitDistance(currentEnemy) + getConsumeDistance(currentFriendly, currentEnemy) + currentFriendly.speed * 2;
 			} else if (splitOpportunity && !tooBigToWorry(currentEnemy, currentFriendly)) {
 				currentOpportunityDistance += getSplitDistance(currentFriendly) + getConsumeDistance(currentEnemy, currentFriendly);
 			} else if (consumeThreat) {
-				currentWorryDistance += getConsumeDistance(currentFriendly, currentEnemy);
+				currentWorryDistance += getConsumeDistance(currentFriendly, currentEnemy) + currentFriendly.speed * 2;
 			} else if (consumeOpportunity) {
 				currentOpportunityDistance += getConsumeDistance(currentEnemy, currentFriendly);
 			}
@@ -84,6 +84,10 @@ function gatherImpulses(organismState, myOrganism, bot) {
 
 		if (threat > 0) {
 			bot.threatened = true;
+
+			if (worryDistance > closestDistance) {
+				bot.immediateThreats = true;
+			}
 		}
 
 		//Always create new impulse
@@ -125,14 +129,19 @@ function gatherImpulses(organismState, myOrganism, bot) {
 			var currentDirection = toDegrees(currentFriendly.ox, currentFriendly.oy, currentVirus.ox, currentVirus.oy);
 			var relativeDirection = toDegrees(myOrganism.ox, myOrganism.oy, currentFriendly.ox, currentFriendly.oy);
 			var directionDifference = getAngleDifference(currentDirection, relativeDirection);
-			var relativeDistance = distance(currentFriendly, myOrganism) * Math.cos(directionDifference);
+			var relativeDistance = distance(currentFriendly, myOrganism);
+			if (directionDifference > 90) {
+				directionDifference = 180 - directionDifference;
+				relativeDistance = relativeDistance * -1;
+			}
+			var relativeDistance = relativeDistance * Math.cos(directionDifference);
 
 			threatArray.push(currentFriendly);
 			var currentDistance = distance(currentFriendly, currentVirus);
 			if (currentDistance < closestDistance) {
 				closestDistance = currentDistance;
-				direction = getDirection(currentFriendly, currentVirus);
-				worryDistance = getConsumeDistance(currentVirus, currentFriendly) + relativeDistance;
+				direction = toDegrees(currentFriendly.ox, currentFriendly.oy, currentVirus.ox, currentVirus.oy);
+				worryDistance = getConsumeDistance(currentVirus, currentFriendly) + relativeDistance + currentFriendly.speed * 2;
 			}
 		}
 
@@ -140,6 +149,9 @@ function gatherImpulses(organismState, myOrganism, bot) {
 			label = 'Virus Threat';
 			color = '#FF0000';
 			bot.threatened = true;
+			if (worryDistance > closestDistance) {
+				bot.immediateThreats = true;
+			}
 		} else {
 			label = 'Virus Eat';
 			color = '#00FF00';
@@ -177,12 +189,13 @@ function gatherImpulses(organismState, myOrganism, bot) {
 		if (closestFriendly != null) {
 
 			impulses.push(new Impulse(
-				-1,
-				currentSkittle,
-				[ closestFriendly ],
-				nearestDistance,
-				getDirection(closestFriendly, currentSkittle),
-				'Skittle',
+				-1, //threat
+				currentSkittle, //enemy
+				[ closestFriendly ], //my concerned organisms
+				nearestDistance, //closest distance from concerned organisms
+				0, //worry distance
+				toDegrees(closestFriendly.ox, closestFriendly.oy, currentSkittle.ox, currentSkittle.oy), //direction
+				'Skittle', //label
 				'#FF0000'
 			));
 		}

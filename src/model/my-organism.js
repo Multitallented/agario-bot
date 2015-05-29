@@ -1,5 +1,4 @@
 var MyOrganism = function(myOrganisms) {
-	this.organisms = myOrganisms;
 	if (myOrganisms.length < 1) {
 		return;
 	}
@@ -11,15 +10,26 @@ var MyOrganism = function(myOrganisms) {
 		this.ox += organism.ox;
 		this.oy += organism.oy;
 
+		if(organism.x2){
+			organism.dx=organism.x-organism.x2
+		}
+		if(organism.y2){
+			organism.dy=organism.y-organism.y2
+		}
+		organism.x2=organism.x;
+		organism.y2=organism.y;
 		organism.mass = getMass(organism.size);
-		organism.speed = getSpeed(organism);
 		organism.direction = getDirection(organism);
+		organism.speed = getSpeed(organism);
+
 		this.mass += organism.mass;
 		if (largestMass < organism.mass) {
 			largestMass = organism.mass;
 			largestOrganism = organism;
 		}
 	}
+
+	this.organisms = myOrganisms;
 	if (largestOrganism == null) {
 		return;
 	}
@@ -30,7 +40,7 @@ var MyOrganism = function(myOrganisms) {
 	this.speed = getSpeed(this);
 	this.direction = getDirection(this);
 
-	var farthest = 0;
+	var farthest = -1;
 	var farthestSize = 0;
 	for (var i=0; i< myOrganisms.length; i++) {
 		var organism = myOrganisms[i];

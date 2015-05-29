@@ -2,7 +2,7 @@ function getDirection(organism) {
 	return toDegrees(organism.ox, organism.oy, organism.dx, organism.dy);
 }
 function getSpeed(organism) {
-	return distance(organism, {ox: organism.dx, oy: organism.dy});
+	return distance(organism, {ox: organism.dx + organism.ox, oy: organism.dy + organism.oy});
 }
 function getAngleDifference(angle1, angle2) {
 	var difference = Math.abs(angle1 - angle2);
@@ -16,14 +16,15 @@ function getMass(size) {
 }
 function createEdgeThreat(myOrganism) {
 	var worryDistance = myOrganism.speed * 2;
-	if (myOrganism.ox < worryDistance) {
+	var threatDistance = myOrganism.size * 8;
+	if (myOrganism.ox < threatDistance) {
 		return new Impulse(999999, {name: 'Left Edge', ox: 0, oy: myOrganism.oy, dx: 0, dy: 0, mass: 999999}, myOrganism.organisms, myOrganism.ox, worryDistance, 180, 'Left Edge', '#FF0000');
-	} else if (myOrganism.oy < worryDistance) {
+	} else if (myOrganism.oy < threatDistance) {
 		return new Impulse(999999, {name: 'Top Edge', ox: myOrganism.ox, oy: 0, dx: 0, dy: 0, mass: 999999}, myOrganism.organisms, myOrganism.oy, worryDistance, 270, 'Top Edge', '#FF0000');
-	} else if (myOrganism.ox > 11200 - worryDistance) {
-		return new Impulse(999999, {name: 'Right Edge', ox: 11200, oy: myOrganism.oy, dx: 0, dy: 0, mass: 999999}, myOrganism.organisms, 11200 - myOrganism.ox, worryDistance, 270, 'Right Edge', '#FF0000');
-	} else if (myOrganism.oy > 11200 - worryDistance) {
-		return new Impulse(999999, {name: 'Bottom Edge', ox: myOrganism.ox, oy: 11200, dx: 0, dy: 0, mass: 999999}, myOrganism.organisms, 11200 - myOrganism.oy, worryDistance, 270, 'Bottom Edge', '#FF0000');
+	} else if (myOrganism.ox > 11200 - threatDistance) {
+		return new Impulse(999999, {name: 'Right Edge', ox: 11200, oy: myOrganism.oy, dx: 0, dy: 0, mass: 999999}, myOrganism.organisms, 11200 - myOrganism.ox, worryDistance, 0, 'Right Edge', '#FF0000');
+	} else if (myOrganism.oy > 11200 - threatDistance) {
+		return new Impulse(999999, {name: 'Bottom Edge', ox: myOrganism.ox, oy: 11200, dx: 0, dy: 0, mass: 999999}, myOrganism.organisms, 11200 - myOrganism.oy, worryDistance, 90, 'Bottom Edge', '#FF0000');
 	}
 }
 function isTravelingTowardsMe(food, eater) {
@@ -73,24 +74,6 @@ function getSplitDistance(eater) {
 }
 function getConsumeDistance(food, eater) {
 	return eater.size - food.size;
-}
-function calcSplitDistance(food, eater) {
-	var eaterDiameter = getDiameter(eater.size);
-	var splitDistance = eaterDiameter * (3.5 - eaterDiameter / 800) + 250;
-	var splitSize = eaterDiameter / 2;
-
-	var foodDiameter = getDiameter(food.size);
-	var sizePercentage = foodDiameter / splitSize;
-	var consumptionDistance = (splitSize / 2 + foodDiameter / 2 - sizePercentage * splitSize / 2) * 2.1;
-	return splitDistance - consumptionDistance;
-
-}
-function consumptionDistance(food, eater) {
-	if ((eater.isVirus && !canBeEaten(eater, food))
-			|| (eater.isVirus && !canBeEaten(food, eater))) {
-		return -1;
-	}
-	return getRadius(eater.size);
 }
 function canBeSplitEaten(food, eater) {
 	return food.mass * 1.15 < eater.mass / 2;

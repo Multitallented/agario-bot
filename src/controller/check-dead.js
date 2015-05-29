@@ -1,4 +1,4 @@
-function checkDead(bot, myOrganisms) {
+function checkDead(bot, myOrganisms, score) {
 	if (myOrganisms.length<1) {
 		if(bot.currentState!='dead'){
 			bot.gameHistory.push([
@@ -7,12 +7,14 @@ function checkDead(bot, myOrganisms) {
 				bot.scoreHistory
 			]);
 
+			if (bot.lastStateChangeDate == null) {
+				bot.lastStateChangeDate = new Date;
+			}
 			console.log("DEAD x_X");
-			console.log("Closest Enemy " + closestEnemyName + Math.floor(closestEnemy) + "(" + Math.floor(closestEnemySize) + ")" + Math.floor(lastSize) + "(" + Math.floor(bot.dodgeDistance) + ")");
 			console.log("Score",~~(bot.scoreHistory[bot.scoreHistory.length-1]/100))
 			console.log("Time spent alive",(Date.now()-bot.lastStateChangeDate.getTime())/60000,"mins")
 			bot.scoreHistory=[];
-			bot.lastStateChangeDate=new Date
+			bot.lastStateChangeDate=new Date;
 		}
 		bot.currentState='dead';
 		return false;
