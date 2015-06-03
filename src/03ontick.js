@@ -125,7 +125,7 @@ tick: function(organisms, myOrganisms, score) {
 		}
 
 		//ignore threats that are farther away
-		if (this.immediateThreats && impulse.distance / 2 > this.impulses[0].distance) {
+		if (isRunning && impulse.distance / 2 > this.impulses[0].distance) {
 			continue;
 		}
 
@@ -230,7 +230,7 @@ tick: function(organisms, myOrganisms, score) {
 				runOnce = false;
 			}
 
-			if (impulse.target.length > 0 && canBeSplitEaten(impulse.enemy, impulse.target[0]) && impulse.worryDistance > impulse.distance && isTravelingTowardsMe(impulse.direction, myOrganism.direction)) {
+			if (impulse.target.length > 0 && canBeSplitEaten(impulse.enemy, impulse.target[0]) && impulse.worryDistance > impulse.distance && isTravelingTowardsMe(impulse.direction, myOrganism.direction) && this.safeSplit) {
 				shouldSplit = true;
 			}
 			opportunity = impulse;
@@ -239,8 +239,9 @@ tick: function(organisms, myOrganisms, score) {
 		//defensive split
 		if (impulse.enemy.speed > 30 && 300 + myOrganism.size > impulse.distance) {
 			console.log('defensive split: ' + getAngleDifference(sanitizeDegrees(impulse.direction + 180), impulse.enemy.direction));
+			console.log('def threat: ' + (impulse.threat > myOrganism.mass / 2) + ":" + canBeEaten(myOrganism, impulse.enemy));
 		}
-		if ((impulse.threat > 0 || canBeEaten(myOrganism, impulse.enemy)) &&
+		if ((impulse.threat > myOrganism.mass / 2 || canBeEaten(myOrganism, impulse.enemy)) &&
 			300 + myOrganism.size > impulse.distance &&
 			isTravelingTowardsMe(impulse.direction, impulse.enemy) &&
 			impulse.enemy.speed > 30) {
@@ -257,7 +258,7 @@ tick: function(organisms, myOrganisms, score) {
 
 	var moveCoords = toCoords(moveDirection, myOrganism.ox, myOrganism.oy, moveDistance);
 
-	if (shouldSplit && opportunity != null && this.safeSplit) {
+	if (this.opportunity && opportunity != null) {
 		moveCoords.x += opportunity.enemy.dx * 2;
 		moveCoords.y += opportunity.enemy.dy * 2;
 	}
