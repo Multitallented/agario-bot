@@ -32,11 +32,8 @@ function createEdgeThreat(myOrganism) {
 	}
 	return threatArray;
 }
-function isTravelingTowardsMe(food, eater) {
-	var tolerance = 30;
-	var enemyVector = toDegrees(eater.dx, eater.dy, eater.ox, eater.oy);
-	var enemyDirection = toDegrees(food.ox, food.oy, eater.ox, eater.oy);
-	return Math.abs(enemyVector - enemyDirection) < tolerance || Math.abs(Math.min(enemyVector, enemyDirection) + 360 - Math.max(enemyDirection, enemyVector)) < tolerance;
+function isTravelingTowardsMe(threatDirection, eater) {
+	return getAngleDifference(sanitizeDegrees(threatDirection + 180), eater.direction) < 16;
 }
 function sanitizeDegrees(degrees) {
 	while (degrees > 359) {
@@ -84,5 +81,5 @@ function canBeSplitEaten(food, eater) {
 	return food.mass * 1.15 < eater.mass / 2;
 }
 function canBeEaten(food, eater) {
-	return eater.mass - food.mass > 10 && food.mass * 1.15 < eater.mass;
+	return eater.mass - food.mass > 15 && food.mass * 1.15 < eater.mass;
 }

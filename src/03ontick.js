@@ -89,14 +89,38 @@ tick: function(organisms, myOrganisms, score) {
 		return a.worryDistance - b.worryDistance;
 	});
 
+	//========================
 	//remove excess impulses
 	var tempArray = [];
 	var previousThreat = 0;
+	var biggestThreat = -1;
+	var smallestThreat = 999999;
+	var isRunning = this.immediateThreats || (this.threatened && this.runCooldown > 0);
+
+	for (var i=0; i< this.impulses.length; i++) {
+		var impulse = this.impulses[i];
+		biggestThreat = Math.max(biggestThreat, impulse.threat);
+		smallestThreat = Math.min(smallestThreat, impulse.threat);
+	}
+	var biggestImpulse = smallestThreat;
+	if (biggestImpulse < 0) {
+		biggestImpulse = Math.max(biggestThreat, Math.abs(smallestThreat));
+	} else if (biggestImpulse == 999999) {
+		biggestImpulse = biggestThreat;
+	} else {
+		biggestImpulse = biggestThreat;
+	}
+
 	for (var i=0; i< this.impulses.length; i++) {
 		var impulse = this.impulses[i];
 
 		//ignore non-threats and non-opportunities
 		if (impulse.threat == 0) {
+			continue;
+		}
+
+		//ignore minor threats/opportunities
+		if (isRunning && !this.opportunity && biggestImpulse > 1 && Math.abs(impulse.threat * 2) < biggestImpulse) {
 			continue;
 		}
 
@@ -117,6 +141,11 @@ tick: function(organisms, myOrganisms, score) {
 
 		//if threatened and running, skip opportunities
 		if (this.threatened && (impulse.threat < 1 || impulse.label == 'Virus Threat') && this.runCooldown > 0) {
+			continue;
+		}
+
+		//don't chase people you can't catch
+		if (this.opportunity && impulse.threat < -1 && impulse.enemy.dx != 0 && impulse.worryDistance + 100 < impulse.distance) {
 			continue;
 		}
 
@@ -161,7 +190,6 @@ tick: function(organisms, myOrganisms, score) {
 	var opportunity = null;
 	var moveDistance = 0;
 	var moveDirection = 0;
-	var isRunning = this.immediateThreats || (this.threatened && this.runCooldown > 0);
 	var gap = -1;
 	for (var i = 0; i < this.impulses.length; i++) {
 		var impulse = this.impulses[i];
@@ -192,31 +220,35 @@ tick: function(organisms, myOrganisms, score) {
 			}
 		}
 
-		moveDistance = impulse.distance;
+		moveDistance = myOrganism.organisms.length > 1 ? impulse.distance + 20 : impulse.distance;
 
 		//Only go with the biggest opportunity
-		if (impulse.threat < 0) {
+		if (impulse.threat < -1) {
 
-			//TODO fix attack splits
-			if (impulse.worryDistance < impulse.distance && false) {
+			if (runOnce && impulse.target.length > 0 && canBeSplitEaten(impulse.enemy, impulse.target[0])) {
+				console.log('split opp: ' + isTravelingTowardsMe(impulse.direction, myOrganism.direction) + ":" + impulse.worryDistance > impulse.distance);
+				runOnce = false;
+			}
+
+			if (impulse.target.length > 0 && canBeSplitEaten(impulse.enemy, impulse.target[0]) && impulse.worryDistance > impulse.distance && isTravelingTowardsMe(impulse.direction, myOrganism.direction)) {
 				shouldSplit = true;
 			}
 			opportunity = impulse;
 		}
 
 		//defensive split
-		if (impulse.enemy.speed > 30 && impulse.worryDistance > impulse.distance) {
+		if (impulse.enemy.speed > 30 && 300 + myOrganism.size > impulse.distance) {
 			console.log('defensive split: ' + getAngleDifference(sanitizeDegrees(impulse.direction + 180), impulse.enemy.direction));
 		}
-		if (impulse.threat > 0 &&
-			impulse.worryDistance > impulse.distance &&
-			getAngleDifference(sanitizeDegrees(impulse.direction + 180), impulse.enemy.direction) < 10 &&
+		if ((impulse.threat > 0 || canBeEaten(myOrganism, impulse.enemy)) &&
+			300 + myOrganism.size > impulse.distance &&
+			isTravelingTowardsMe(impulse.direction, impulse.enemy) &&
 			impulse.enemy.speed > 30) {
 			shouldSplit = true;
 		}
 	}
 
-	//TODO adjust for multiple skittles
+	//TODO adjust for multiple opportunities
 
 
 	if (this.impulses.length != 0 && this.impulses[0].threat > 0) {
@@ -225,13 +257,9 @@ tick: function(organisms, myOrganisms, score) {
 
 	var moveCoords = toCoords(moveDirection, myOrganism.ox, myOrganism.oy, moveDistance);
 
-	if (shouldSplit && this.safeSplit && opportunity != null) {
+	if (shouldSplit && opportunity != null && this.safeSplit) {
 		moveCoords.x += opportunity.enemy.dx * 2;
 		moveCoords.y += opportunity.enemy.dy * 2;
-		//make sure I'm pointed in the right direction
-		if (getAngleDifference(opportunity.direction, myOrganism.direction) > 10) {
-			shouldSplit = false;
-		}
 	}
 	this.moveCoords = moveCoords;
 	if (window.botEnabled) {
@@ -242,28 +270,4 @@ tick: function(organisms, myOrganisms, score) {
 			this.attackSplitCooldown = 40;
 		}
 	}
-
-	// super large = 300(0)
-	// split threat = 500(180)!
-	// move 400(0)
-
-	// super large = 10(0)!
-	// super large = 10(180)!
-	// move 400(90)
-
-	// split threat = 400(0)
-	// split threat = 300(180)!
-	// move 400(0)
-
-	// super large = 400(0)
-	// super large = 400(180)
-	// move 400(90)
-
-	// super large = 10(0)!
-	// left edge = 500(180)!
-	// move 400(170)
-
-	// super large = 10(0)!
-	// left edge = 10(180)!
-	// move 400(90)
 },

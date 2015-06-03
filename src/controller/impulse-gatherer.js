@@ -59,9 +59,9 @@ function gatherImpulses(organismState, myOrganism, bot) {
 			} else if (splitOpportunity && !tooBigToWorry(currentEnemy, currentFriendly)) {
 				currentOpportunityDistance += getSplitDistance(currentFriendly) + getConsumeDistance(currentEnemy, currentFriendly);
 			} else if (consumeThreat) {
-				currentWorryDistance += getConsumeDistance(currentFriendly, currentEnemy) + currentFriendly.speed * 2 + 100;
+				currentWorryDistance += getConsumeDistance(currentFriendly, currentEnemy) * 1.15 + currentFriendly.speed * 2 + 50;
 			} else if (consumeOpportunity) {
-				currentOpportunityDistance += getConsumeDistance(currentEnemy, currentFriendly);
+				currentOpportunityDistance += getConsumeDistance(currentEnemy, currentFriendly) + 50;
 			}
 
 			worryDistance = Math.max(currentWorryDistance, worryDistance);
@@ -74,13 +74,24 @@ function gatherImpulses(organismState, myOrganism, bot) {
 				threatArray.push(currentFriendly);
 			}
 		}
+		var safeChase = true;
+		for (var j=0; j<organismState.enemies.length; j++) {
+			var sameEnemy = organismState.enemies[j];
+			if (sameEnemy.name != currentEnemy.name || sameEnemy.ox == currentEnemy.ox) {
+				continue;
+			}
+			if (distance(sameEnemy, currentEnemy) < sameEnemy.size + currentEnemy.size) {
+				safeChase = false;
+				break;
+			}
+		}
 
-		if (opportunityMass > 0) {
+		if ((consumeOpportunity || splitOpportunity) && opportunityMass < 0 && safeChase) {
 			threat = opportunityMass;
 			worryDistance = opportunityDistance;
 			label = 'Eat ' + currentEnemy.name;
 			color = '#00FF00';
-			this.opportunity = true;
+			bot.opportunity = true;
 		}
 
 		if (threat > 0) {
