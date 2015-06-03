@@ -1,5 +1,6 @@
 function gatherImpulses(organismState, myOrganism, bot) {
 	var impulses = [];
+	var attackTargetUpdated = false;
 
 	//Enemy Impulses
 	for (var i=0; i<organismState.enemies.length; i++) {
@@ -14,6 +15,7 @@ function gatherImpulses(organismState, myOrganism, bot) {
 		var opportunityMass = 0;
 		var worryDistance = 0;
 		var opportunityDistance = 0;
+		var closestFriendly = null;
 
 		for (var j=0; j<myOrganism.organisms.length; j++) {
 			var currentFriendly = myOrganism.organisms[j];
@@ -22,7 +24,7 @@ function gatherImpulses(organismState, myOrganism, bot) {
 			var consumeThreat = canBeEaten(currentFriendly, currentEnemy);
 			var splitThreat = consumeThreat ? canBeSplitEaten(currentFriendly, currentEnemy) : false;
 			var consumeOpportunity = consumeThreat ? false : canBeEaten(currentEnemy, currentFriendly);
-			var splitOpportunity = consumeOpportunity ? canBeSplitEaten(currentEnemy, currentFriendly) : false;
+			var splitOpportunity = consumeOpportunity ? currentFriendly.mass > 44 && canBeSplitAttacked(currentEnemy, currentFriendly) : false;
 			var currentThreat = consumeThreat ? currentFriendly.mass : consumeOpportunity ? currentEnemy.mass * -1 : 0;
 
 			var relativeDirection = toDegrees(myOrganism.ox, myOrganism.oy, currentFriendly.ox, currentFriendly.oy);
@@ -41,6 +43,7 @@ function gatherImpulses(organismState, myOrganism, bot) {
 
 				if (currentThreat < 0) {
 					opportunityMass = currentThreat;
+					closestFriendly = currentFriendly;
 
 				} else {
 					opportunityMass = 0;
@@ -57,7 +60,7 @@ function gatherImpulses(organismState, myOrganism, bot) {
 			if (splitThreat && !tooBigToWorry(currentFriendly, currentEnemy)) {
 				currentWorryDistance += getSplitDistance(currentEnemy) + getConsumeDistance(currentFriendly, currentEnemy) + currentFriendly.speed * 2;
 			} else if (splitOpportunity && !tooBigToWorry(currentEnemy, currentFriendly)) {
-				currentOpportunityDistance += getSplitDistance(currentFriendly) + getConsumeDistance(currentEnemy, currentFriendly);
+				currentOpportunityDistance += getSplitDistance(currentFriendly) + getConsumeDistance(currentEnemy, currentFriendly) - 70;
 			} else if (consumeThreat) {
 				currentWorryDistance += getConsumeDistance(currentFriendly, currentEnemy) * 1.15 + currentFriendly.speed * 2 + 50;
 			} else if (consumeOpportunity) {
@@ -74,6 +77,8 @@ function gatherImpulses(organismState, myOrganism, bot) {
 				threatArray.push(currentFriendly);
 			}
 		}
+
+		//don't chase enemies that are about to combine
 		var safeChase = true;
 		for (var j=0; j<organismState.enemies.length; j++) {
 			var sameEnemy = organismState.enemies[j];
@@ -92,6 +97,7 @@ function gatherImpulses(organismState, myOrganism, bot) {
 			label = 'Eat ' + currentEnemy.name;
 			color = '#00FF00';
 			bot.opportunity = true;
+			threatArray.push(closestFriendly);
 		}
 
 		if (threat > 0) {
@@ -102,8 +108,13 @@ function gatherImpulses(organismState, myOrganism, bot) {
 			}
 		}
 
+		//sort target array by distance
+		threatArray.sort(function(a, b) {
+			return a.distance - b.distance;
+		});
+
 		//Always create new impulse
-		impulses.push(new Impulse(
+		var newImpulse = new Impulse(
 			threat,
 			currentEnemy,
 			threatArray,
@@ -112,7 +123,22 @@ function gatherImpulses(organismState, myOrganism, bot) {
 			direction,
 			label,
 			color
-		));
+		);
+		impulses.push(newImpulse);
+
+		//Update current attack target
+		if (bot.attackTarget != null &&
+			bot.attackTarget.enemy.name == currentEnemy.name &&
+			Math.abs(bot.attackTarget.enemy.ox - currentEnemy.ox) < 40 &&
+			Math.abs(bot.attackTarget.enemy.oy - currentEnemy.oy) < 40) {
+			bot.attackTarget = newImpulse;
+			attackTargetUpdated = true;
+		}
+	}
+	//target lost
+	if (!attackTargetUpdated) {
+		bot.attackTarget = null;
+		bot.attackSplitCooldown = 0;
 	}
 
 	//Viruses

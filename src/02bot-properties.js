@@ -9,6 +9,7 @@ Ai.prototype = {
 	scoreHistory:[],
 	maxThreatCooldown: 40,
 	attackSplitCooldown: 0,
+	attackTarget: null,
 	runCooldown: 0,
 	immediateThreatCooldown: 0,
 	currentState: '',
