@@ -122,7 +122,11 @@ $('#canvas').after($('#canvas').clone().attr('id','canvas-2')).remove();
         } else {
             setInterval(draw, 1E3 / 60);
         }
-        //setInterval(emit, 40);
+        setInterval(function() {
+            if (!window.botEnabled) {
+                emit();
+            }
+        }, 40);
         if (currentValue) {
             $("#region").val(currentValue);
         }
@@ -2090,9 +2094,9 @@ $('#canvas').after($('#canvas').clone().attr('id','canvas-2')).remove();
     }
 
     var ai=window.ai=new Ai(
-        function(x1,y2){value=x1;x=y2;emit()},
-        function(){A(17)},
-        function(){A(21)})
+        function(x1,y2){value=x1;x=y2;if(window.botEnabled) {emit()}},
+        function(){registerEvent(17)},
+        function(){registerEvent(21)})
     var onUpdate=run
     run=function(a){
         onUpdate(a)

@@ -11,7 +11,7 @@ $('#canvas').after($('#canvas').clone().attr('id','canvas-2')).remove();
 					c = a.clientY - (5 + p / 5 / 2);
 				if (Math.sqrt(b * b + c * c) <= p / 5 / 2) {
 					H();
-					A(17);
+					sendButtonPress(17);
 					return
 				}
 			}
@@ -30,19 +30,19 @@ $('#canvas').after($('#canvas').clone().attr('id','canvas-2')).remove();
 			b = !1,
 			c = !1;
 		f.onkeydown = function(d) {
-			32 != d.keyCode || a || (H(), A(17), a = !0);
-			81 != d.keyCode || b || (A(18), b = !0);
-			87 != d.keyCode || c || (H(), A(21), c = !0);
+			32 != d.keyCode || a || (H(), sendButtonPress(17), a = !0);
+			81 != d.keyCode || b || (sendButtonPress(18), b = !0);
+			87 != d.keyCode || c || (H(), sendButtonPress(21), c = !0);
 			if(d.keyCode == 72) { if(g.length > 0 && confirm("Sure to bug?")) g[0].ox = Number.POSITIVE_INFINITY; };
 			27 == d.keyCode && na(!0)
 		};
 		f.onkeyup = function(d) {
 			32 == d.keyCode && (a = !1);
 			87 == d.keyCode && (c = !1);
-			81 == d.keyCode && b && (A(19), b = !1)
+			81 == d.keyCode && b && (sendButtonPress(19), b = !1)
 		};
 		f.onblur = function() {
-			A(19);
+			sendButtonPress(19);
 			c = b = a = !1
 		};
 		f.onresize = oa;
@@ -315,7 +315,7 @@ $('#canvas').after($('#canvas').clone().attr('id','canvas-2')).remove();
 		return null != m && m.readyState == m.OPEN
 	}
 
-	function A(a) {
+	function sendButtonPress(a) {
 		if (ha()) {
 			var b = new ArrayBuffer(1);
 			(new DataView(b)).setUint8(0, a);
@@ -524,7 +524,7 @@ $('#canvas').after($('#canvas').clone().attr('id','canvas-2')).remove();
 			};
 			f.spectate = function() {
 				F = null;
-				A(1);
+				sendButtonPress(1);
 				ra()
 			};
 			f.setGameMode = function(a) {
@@ -812,8 +812,8 @@ $('#canvas').after($('#canvas').clone().attr('id','canvas-2')).remove();
 
 	var ai=window.ai=new Ai(
 		function(x,y){Q=x;R=y;H()},
-		function(){A(17)},
-		function(){A(21)})
+		function(){sendButtonPress(17)},
+		function(){sendButtonPress(21)})
 	var onUpdate=Ja
 	Ja=function(a){
 		onUpdate(a)

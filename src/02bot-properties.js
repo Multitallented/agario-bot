@@ -2,6 +2,7 @@ Ai.prototype = {
 	impulses: [],
 	safeSplit: true,
 	threatened: false,
+	opportunity: false,
 	immediateThreats: false,
 	lastStateChangeDate:null,
 	gameHistory:[],

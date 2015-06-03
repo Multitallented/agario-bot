@@ -76,10 +76,11 @@ function gatherImpulses(organismState, myOrganism, bot) {
 		}
 
 		if (opportunityMass > 0) {
-			threat = -1 * opportunityMass;
+			threat = opportunityMass;
 			worryDistance = opportunityDistance;
 			label = 'Eat ' + currentEnemy.name;
 			color = '#00FF00';
+			this.opportunity = true;
 		}
 
 		if (threat > 0) {
@@ -155,6 +156,7 @@ function gatherImpulses(organismState, myOrganism, bot) {
 		} else {
 			label = 'Virus Eat';
 			color = '#00FF00';
+			this.opportunity = true;
 		}
 
 		if (threat != 0) {

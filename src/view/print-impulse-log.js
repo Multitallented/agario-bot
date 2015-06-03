@@ -2,6 +2,7 @@ function printImpulseLog(impulses, bot) {
 	var miscStatString = "";
 	var moveDistance = 0;
 	var moveDirection = 0;
+	var isRunning = bot.immediateThreats || (bot.threatened && bot.runCooldown > 0);
 	var gap = -1;
 	for (var i = 0; i <impulses.length; i++) {
 		var impulse = impulses[i];
@@ -20,8 +21,8 @@ function printImpulseLog(impulses, bot) {
 				currentGap = getAngleDifference(impulse.direction, impulses[i - 1].direction);
 			}
 			var isNewGap = currentGap == -1 ||
-				(impulse.threat > -1 && currentGap > gap) ||
-				(impulse.threat < 0 && currentGap < gap);
+				(isRunning && currentGap > gap) ||
+				(!isRunning && currentGap < gap);
 			if (isNewGap) {
 				gap = currentGap;
 				if (i == 0) {

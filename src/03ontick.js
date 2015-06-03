@@ -29,12 +29,14 @@ tick: function(organisms, myOrganisms, score) {
 	this.myOrganism = myOrganism;
 	this.safeSplit = true;
 	this.threatened = false;
+	this.opportunity = false;
 	this.immediateThreats = false;
 	this.impulses = gatherImpulses(organismState, myOrganism, this);
 	var runCooldownString = 'Safe Split: ' + (this.safeSplit ? '<span style="color: green;">True</span>' : '<span style="color: red;">False</span>');
 	runCooldownString += ' Threatened: ' + (this.threatened ? '<span style="color: red;">True</span>' : '<span style="color: green;">False</span>');
 	runCooldownString += ' Immediate: ' + (this.immediateThreats ? '<span style="color: red;">True</span>' : '<span style="color: green;">False</span>');
-	runCooldownString += ' Enabled: ' + (window.botEnabled ? '<span style="color: green;">True</span>' : '<span style="color: red;">False</span>');
+	runCooldownString += '<br>Enabled: ' + (window.botEnabled ? '<span style="color: green;">True</span>' : '<span style="color: blue;">False</span>');
+	runCooldownString += ' Opportunity: ' + (this.opportunity ? '<span style="color: green;">True</span>' : '<span style="color: blue;">False</span>');
 	$runCooldown.html(runCooldownString);
 
 	//If under threat, add threats for near edges
@@ -45,24 +47,47 @@ tick: function(organisms, myOrganisms, score) {
 		}
 	}
 
+	//If no impulses, then go to the center of the map
+	if (this.impulses.length < 1) {
+		this.impulses.push(new Impulse(-1,
+			{name: 'Center Map', ox: 5600, oy: 5600, dx: 0, dy: 0, mass: 1},
+			myOrganism.organisms,
+			distance({ox: 5600, oy: 5600}, myOrganism),
+			0,
+			toDegrees(myOrganism.ox, myOrganism.oy,5600, 5600),
+			'Center Map',
+			'#0000FF'));
+	}
+
 	//Sort by biggest concern
 	this.impulses.sort(function (a, b) {
+		//edges take priority
+		if (a.threat == 999999) {
+			return -1;
+		}
+		if (b.threat == 999999) {
+			return 1;
+		}
+
+		//go for closest skittle
 		if (a.threat == -1 && b.threat == -1) {
 			return a.distance - b.distance;
 		}
 
-		if (a.threat < 1 && b.threat > 0) {
+		//threats before opportunities
+		if (a.threat < 0 && b.threat > -1) {
 			return 1;
 		}
-		if (b.threat < 1 && a.threat > 0) {
+		if (b.threat < 0 && a.threat > -1) {
 			return -1;
 		}
 		//biggest negatives go first
-		if (b.threat < 1 && a.threat < 1) {
+		if (b.threat < 0 && a.threat < 0) {
 			return a.threat - b.threat;
 		}
 		var aWorry = a.worryDistance > a.distance;
 		var bWorry = b.worryDistance > b.distance;
+		//immediate threats first
 		if (aWorry && bWorry) {
 			return a.distance - b.distance;
 		}
@@ -70,13 +95,6 @@ tick: function(organisms, myOrganisms, score) {
 			return -1;
 		}
 		if (bWorry) {
-			return 1;
-		}
-
-		if (a.threat == 999999) {
-			return -1;
-		}
-		if (b.threat == 999999) {
 			return 1;
 		}
 
@@ -89,17 +107,31 @@ tick: function(organisms, myOrganisms, score) {
 	for (var i=0; i< this.impulses.length; i++) {
 		var impulse = this.impulses[i];
 
-		if (this.immediateThreats && impulse.worryDistance < impulse.distance && impulse.threat != 999999) {
+		//ignore non-threats and non-opportunities
+		if (impulse.threat == 0) {
 			continue;
 		}
 
+		//ignore threats that are farther away
+		if (this.immediateThreats && impulse.distance / 2 > this.impulses[0].distance) {
+			continue;
+		}
+
+		//when threatened, don't show any non-immediate threats
+		if (this.immediateThreats && !impulse.enemy.isVirus && impulse.worryDistance < impulse.distance && impulse.threat != 999999) {
+			continue;
+		}
+
+		//if not immediately threatened and not running, then skip threats
 		if (!this.immediateThreats && impulse.threat > -1 && this.runCooldown < 1) {
 			continue;
 		}
 
+		//if threatened and running, skip opportunities
 		if (this.threatened && (impulse.threat < 1 || impulse.label == 'Virus Threat') && this.runCooldown > 0) {
 			continue;
 		}
+
 		if (previousThreat < 0) {
 			continue;
 		}
@@ -129,6 +161,7 @@ tick: function(organisms, myOrganisms, score) {
 	var opportunity = null;
 	var moveDistance = 0;
 	var moveDirection = 0;
+	var isRunning = this.immediateThreats || (this.threatened && this.runCooldown > 0);
 	var gap = -1;
 	for (var i = 0; i < this.impulses.length; i++) {
 		var impulse = this.impulses[i];
@@ -146,41 +179,39 @@ tick: function(organisms, myOrganisms, score) {
 			} else {
 				currentGap = impulse.direction - this.impulses[i-1].direction;
 			}
-			if (runOnce && !this.immediateThreats) {
-				console.log("current gap: " + Math.floor(currentGap) + ":" + Math.floor(gap) + ", " + i + "=" + Math.floor(impulse.direction));
-			}
-			if (runOnce && !this.immediateThreats && this.impulses.length - 1 <= i) {
-				console.log('================');
-				runOnce = false;
-			}
 			var isNewGap = (gap == -1 ||
-				(impulse.threat > -1 && currentGap > gap) ||
-				(impulse.threat < 0 && currentGap < gap));
+				(isRunning && currentGap > gap) ||
+				(!isRunning && currentGap < gap));
 			if (isNewGap) {
 				gap = currentGap;
 				if (i==0) {
 					moveDirection = sanitizeDegrees(this.impulses[this.impulses.length - 1].direction + currentGap / 2);
 				} else {
-					moveDirection = sanitizeDegrees(impulse.direction + currentGap / 2);
+					moveDirection = sanitizeDegrees(this.impulses[i-1].direction + currentGap / 2);
 				}
 			}
 		}
 
 		moveDistance = impulse.distance;
 
-
 		//Only go with the biggest opportunity
 		if (impulse.threat < 0) {
-			if (impulse.worryDistance < impulse.distance) {
+
+			//TODO fix attack splits
+			if (impulse.worryDistance < impulse.distance && false) {
 				shouldSplit = true;
 			}
 			opportunity = impulse;
 		}
 
 		//defensive split
-		if (impulse.worryDistance > impulse.distance &&
-			getAngleDifference(impulse.direction, impulse.enemy.direction) < 15 &&
-			impulse.enemy.speed > 40) {
+		if (impulse.enemy.speed > 30 && impulse.worryDistance > impulse.distance) {
+			console.log('defensive split: ' + getAngleDifference(sanitizeDegrees(impulse.direction + 180), impulse.enemy.direction));
+		}
+		if (impulse.threat > 0 &&
+			impulse.worryDistance > impulse.distance &&
+			getAngleDifference(sanitizeDegrees(impulse.direction + 180), impulse.enemy.direction) < 10 &&
+			impulse.enemy.speed > 30) {
 			shouldSplit = true;
 		}
 	}
@@ -194,7 +225,7 @@ tick: function(organisms, myOrganisms, score) {
 
 	var moveCoords = toCoords(moveDirection, myOrganism.ox, myOrganism.oy, moveDistance);
 
-	if (shouldSplit && !this.threatened && opportunity != null) {
+	if (shouldSplit && this.safeSplit && opportunity != null) {
 		moveCoords.x += opportunity.enemy.dx * 2;
 		moveCoords.y += opportunity.enemy.dy * 2;
 		//make sure I'm pointed in the right direction
@@ -206,9 +237,9 @@ tick: function(organisms, myOrganisms, score) {
 	if (window.botEnabled) {
 		this.move(moveCoords.x, moveCoords.y);
 		//TODO possible button cooldown
-		if (shouldSplit) {
-			//this.split();
-			//this.attackSplitCooldown = 80;
+		if (shouldSplit && this.attackSplitCooldown < 1) {
+			this.split();
+			this.attackSplitCooldown = 40;
 		}
 	}
 

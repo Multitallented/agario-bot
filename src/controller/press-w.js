@@ -54,7 +54,6 @@ function pressW() {
 }
 window.pressW = pressW;
 document.onkeypress = function(e) {
-    console.log(e.keyCode);
     e = e || window.event;
     if (e.keyCode == 102) {
         for (var i = 0; i<7; i++) {
@@ -62,5 +61,7 @@ document.onkeypress = function(e) {
         }
     } else if (e.keyCode == 97) {
         window.botEnabled = !window.botEnabled;
+    } else if (e.keyCode == 103) {
+        runOnce = true;
     }
 }
