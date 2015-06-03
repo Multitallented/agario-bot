@@ -47,18 +47,6 @@ tick: function(organisms, myOrganisms, score) {
 		}
 	}
 
-	//If no impulses, then go to the center of the map
-	if (this.impulses.length < 1) {
-		this.impulses.push(new Impulse(-1,
-			{name: 'Center Map', ox: 5600, oy: 5600, dx: 0, dy: 0, mass: 1},
-			myOrganism.organisms,
-			distance({ox: 5600, oy: 5600}, myOrganism),
-			0,
-			toDegrees(myOrganism.ox, myOrganism.oy,5600, 5600),
-			'Center Map',
-			'#0000FF'));
-	}
-
 	//Sort by biggest concern
 	this.impulses.sort(function (a, b) {
 		//edges take priority
@@ -141,6 +129,18 @@ tick: function(organisms, myOrganisms, score) {
 		}
 	}
 	this.impulses = tempArray;
+
+	//If no impulses, then go to the center of the map
+	if (this.impulses.length < 1) {
+		this.impulses.push(new Impulse(-1,
+			{name: 'Center Map', ox: 5600, oy: 5600, dx: 0, dy: 0, mass: 1},
+			myOrganism.organisms,
+			distance({ox: 5600, oy: 5600}, myOrganism),
+			0,
+			toDegrees(myOrganism.ox, myOrganism.oy,5600, 5600),
+			'Center Map',
+			'#0000FF'));
+	}
 
 
 	if (this.immediateThreats) {
