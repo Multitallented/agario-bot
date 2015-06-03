@@ -1,5 +1,5 @@
 function getDirection(organism) {
-	return toDegrees(organism.ox, organism.oy, organism.dx, organism.dy);
+	return toDegrees(organism.ox, organism.oy, organism.dx + organism.ox, organism.dy + organism.oy);
 }
 function getSpeed(organism) {
 	return distance(organism, {ox: organism.dx + organism.ox, oy: organism.dy + organism.oy});
@@ -17,15 +17,20 @@ function getMass(size) {
 function createEdgeThreat(myOrganism) {
 	var worryDistance = myOrganism.speed * 2;
 	var threatDistance = myOrganism.size * 8;
+	var threatArray = [];
 	if (myOrganism.ox < threatDistance) {
-		return new Impulse(999999, {name: 'Left Edge', ox: 0, oy: myOrganism.oy, dx: 0, dy: 0, mass: 999999}, myOrganism.organisms, myOrganism.ox, worryDistance, 180, 'Left Edge', '#FF0000');
-	} else if (myOrganism.oy < threatDistance) {
-		return new Impulse(999999, {name: 'Top Edge', ox: myOrganism.ox, oy: 0, dx: 0, dy: 0, mass: 999999}, myOrganism.organisms, myOrganism.oy, worryDistance, 270, 'Top Edge', '#FF0000');
-	} else if (myOrganism.ox > 11200 - threatDistance) {
-		return new Impulse(999999, {name: 'Right Edge', ox: 11200, oy: myOrganism.oy, dx: 0, dy: 0, mass: 999999}, myOrganism.organisms, 11200 - myOrganism.ox, worryDistance, 0, 'Right Edge', '#FF0000');
-	} else if (myOrganism.oy > 11200 - threatDistance) {
-		return new Impulse(999999, {name: 'Bottom Edge', ox: myOrganism.ox, oy: 11200, dx: 0, dy: 0, mass: 999999}, myOrganism.organisms, 11200 - myOrganism.oy, worryDistance, 90, 'Bottom Edge', '#FF0000');
+		threatArray.push(new Impulse(999999, {name: 'Left Edge', ox: 0, oy: myOrganism.oy, dx: 0, dy: 0, mass: 999999}, myOrganism.organisms, myOrganism.ox, worryDistance, 180, 'Left Edge', '#FF0000'));
 	}
+	if (myOrganism.oy < threatDistance) {
+		threatArray.push(new Impulse(999999, {name: 'Top Edge', ox: myOrganism.ox, oy: 0, dx: 0, dy: 0, mass: 999999}, myOrganism.organisms, myOrganism.oy, worryDistance, 270, 'Top Edge', '#FF0000'));
+	}
+	if (myOrganism.ox > 11200 - threatDistance) {
+		threatArray.push(new Impulse(999999, {name: 'Right Edge', ox: 11200, oy: myOrganism.oy, dx: 0, dy: 0, mass: 999999}, myOrganism.organisms, 11200 - myOrganism.ox, worryDistance, 0, 'Right Edge', '#FF0000'));
+	}
+	if (myOrganism.oy > 11200 - threatDistance) {
+		threatArray.push(new Impulse(999999, {name: 'Bottom Edge', ox: myOrganism.ox, oy: 11200, dx: 0, dy: 0, mass: 999999}, myOrganism.organisms, 11200 - myOrganism.oy, worryDistance, 90, 'Bottom Edge', '#FF0000'));
+	}
+	return threatArray;
 }
 function isTravelingTowardsMe(food, eater) {
 	var tolerance = 30;
@@ -70,7 +75,7 @@ function distance(organism1, organism2) {
 	return Math.sqrt(Math.pow(organism1.ox - organism2.ox, 2) + Math.pow(organism1.oy - organism2.oy, 2));
 }
 function getSplitDistance(eater) {
-	return eater.size * (3 - eater.size / 400) + 350;
+	return eater.size * (3 - eater.size / 400) + 250;
 }
 function getConsumeDistance(food, eater) {
 	return eater.size;

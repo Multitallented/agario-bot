@@ -11,7 +11,7 @@ tick: function(organisms, myOrganisms, score) {
 	var organismState = new OrganismState(myOrganisms, organisms);
 
 	var myOrganism = new MyOrganism(myOrganisms);
-	$massStat.text('Size: ' + Math.floor(myOrganism.size) + ':' + Math.floor(myOrganism.mass) + '(' + Math.floor(this.runCooldown) + ')');
+	$massStat.text('Size: ' + Math.floor(myOrganism.size) + ':' + Math.floor(myOrganism.mass) + '(x' + Math.floor(myOrganism.ox) + ',y' + Math.floor(myOrganism.oy) + ')');
 	$dodgeStat.text('Speed: (' + Math.floor(myOrganism.direction) + ')' + Math.floor(myOrganism.speed) + ' { ' + Math.floor(myOrganism.dx) + ' , ' + Math.floor(myOrganism.dy) + ' }');
 
 
@@ -34,13 +34,14 @@ tick: function(organisms, myOrganisms, score) {
 	var runCooldownString = 'Safe Split: ' + (this.safeSplit ? '<span style="color: green;">True</span>' : '<span style="color: red;">False</span>');
 	runCooldownString += ' Threatened: ' + (this.threatened ? '<span style="color: red;">True</span>' : '<span style="color: green;">False</span>');
 	runCooldownString += ' Immediate: ' + (this.immediateThreats ? '<span style="color: red;">True</span>' : '<span style="color: green;">False</span>');
+	runCooldownString += ' Enabled: ' + (window.botEnabled ? '<span style="color: green;">True</span>' : '<span style="color: red;">False</span>');
 	$runCooldown.html(runCooldownString);
 
 	//If under threat, add threats for near edges
 	if (this.threatened) {
 		var edgeThreat = createEdgeThreat(myOrganism);
-		if (edgeThreat != undefined) {
-			this.impulses.push(edgeThreat);
+		for(var i=0;i<edgeThreat.length;i++) {
+			this.impulses.push(edgeThreat[i]);
 		}
 	}
 
@@ -96,7 +97,7 @@ tick: function(organisms, myOrganisms, score) {
 			continue;
 		}
 
-		if (this.threatened && impulse.threat < 1 && this.runCooldown > 0) {
+		if (this.threatened && (impulse.threat < 1 || impulse.label == 'Virus Threat') && this.runCooldown > 0) {
 			continue;
 		}
 		if (previousThreat < 0) {
@@ -117,7 +118,7 @@ tick: function(organisms, myOrganisms, score) {
 	//sort by direction
 	if (this.impulses.length > 1) {
 		this.impulses.sort(function(a, b) {
-			return b.direction - a.direction;
+			return a.direction - b.direction;
 		});
 	}
 	printImpulseLog(this.impulses, this);
@@ -132,8 +133,6 @@ tick: function(organisms, myOrganisms, score) {
 	for (var i = 0; i < this.impulses.length; i++) {
 		var impulse = this.impulses[i];
 
-
-
 		if (this.impulses.length == 1) {
 			if (impulse.threat > -1) {
 				moveDirection = sanitizeDegrees(impulse.direction + 180);
@@ -147,9 +146,16 @@ tick: function(organisms, myOrganisms, score) {
 			} else {
 				currentGap = impulse.direction - this.impulses[i-1].direction;
 			}
-			var isNewGap = gap == -1 ||
+			if (runOnce && !this.immediateThreats) {
+				console.log("current gap: " + Math.floor(currentGap) + ":" + Math.floor(gap) + ", " + i + "=" + Math.floor(impulse.direction));
+			}
+			if (runOnce && !this.immediateThreats && this.impulses.length - 1 <= i) {
+				console.log('================');
+				runOnce = false;
+			}
+			var isNewGap = (gap == -1 ||
 				(impulse.threat > -1 && currentGap > gap) ||
-				(impulse.threat < 0 && currentGap < gap);
+				(impulse.threat < 0 && currentGap < gap));
 			if (isNewGap) {
 				gap = currentGap;
 				if (i==0) {
@@ -197,11 +203,13 @@ tick: function(organisms, myOrganisms, score) {
 		}
 	}
 	this.moveCoords = moveCoords;
-	this.move(moveCoords.x, moveCoords.y);
-	//TODO possible button cooldown
-	if (shouldSplit) {
-		//this.split();
-		//this.attackSplitCooldown = 80;
+	if (window.botEnabled) {
+		this.move(moveCoords.x, moveCoords.y);
+		//TODO possible button cooldown
+		if (shouldSplit) {
+			//this.split();
+			//this.attackSplitCooldown = 80;
+		}
 	}
 
 	// super large = 300(0)

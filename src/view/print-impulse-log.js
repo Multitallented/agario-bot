@@ -48,7 +48,7 @@ function printImpulseLog(impulses, bot) {
 		} else {
 			currentColor = 'green';
 		}
-		miscStatString += "<span style='color:" + currentColor + "'>" + impulse.enemy.name + "</span>: ";
+		miscStatString += "<span style='color:" + currentColor + "'>" + impulse.enemy.name + "(" + Math.floor(impulse.enemy.mass) + ")</span>: ";
 
 		if (impulse.distance < impulse.worryDistance) {
 			currentColor = 'red';

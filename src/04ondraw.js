@@ -22,11 +22,5 @@ draw:function(ctx){
 	ctx.moveTo(this.myOrganism.ox, this.myOrganism.oy);
 	ctx.lineTo(this.moveCoords.x, this.moveCoords.y);
 	ctx.stroke();
-	//Speed
-	ctx.beginPath();
-	ctx.strokeStyle = 'red';
-	ctx.moveTo(this.myOrganism.ox, this.myOrganism.oy);
-	ctx.lineTo(this.myOrganism.dx, this.myOrganism.dy);
-	ctx.stroke();
 }
 };
