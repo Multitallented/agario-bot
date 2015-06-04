@@ -41,6 +41,10 @@ function gatherImpulses(organismState, myOrganism, bot) {
 				closestDistance = currentDistance;
 				direction = currentDirection;
 
+				if (threat > 0 && currentThreat > 0 && threatArray.length > 0) {
+					direction = toDegrees(myOrganism.ox, myOrganism.oy, currentEnemy.ox, currentEnemy.oy);
+				}
+
 				if (currentThreat < 0) {
 					opportunityMass = currentThreat;
 					closestFriendly = currentFriendly;
@@ -131,6 +135,9 @@ function gatherImpulses(organismState, myOrganism, bot) {
 			bot.attackTarget.enemy.name == currentEnemy.name &&
 			Math.abs(bot.attackTarget.enemy.ox - currentEnemy.ox) < 40 &&
 			Math.abs(bot.attackTarget.enemy.oy - currentEnemy.oy) < 40) {
+
+			newImpulse.threat = -1 * newImpulse.enemy.mass;
+			newImpulse.worryDistance = 999999;
 			bot.attackTarget = newImpulse;
 			attackTargetUpdated = true;
 		}

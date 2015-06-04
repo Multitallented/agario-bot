@@ -8,6 +8,7 @@ Ai.prototype = {
 	gameHistory:[],
 	scoreHistory:[],
 	maxThreatCooldown: 40,
+	defenseSplitCooldown: 0,
 	attackSplitCooldown: 0,
 	attackTarget: null,
 	runCooldown: 0,

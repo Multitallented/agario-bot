@@ -52,6 +52,7 @@ $('body').append($statContainer);
 $statContainer.css('position','fixed');
 $statContainer.css('top', '220px');
 $statContainer.css('color', 'white');
+$statContainer.css('pointer-events', 'none');
 
 var $massStat = $('<h4 id="mass-stat"></h4>');
 $massStat.css('color', 'white');
@@ -70,6 +71,8 @@ $miscStat.css('color', 'white');
 $statContainer.append($miscStat);
 $miscStat.css('float', 'left');
 
-var behaviorCanvas=$('<div style="position:fixed;width:100%;bottom:5px;text-align:center"><h4 id="behavior-char-title">Bot Behavior</h4><canvas id="behavior-canvas" width="250" height="100"></canvas></div>')
-$('body').append(behaviorCanvas)
-var behaviorCtx=$('#behavior-canvas').get(0).getContext("2d")
+var behaviorCanvas=$('<div id="behavior-container" style="position:fixed;width:100%;bottom:5px;text-align:center"><h4 id="behavior-char-title">Bot Behavior</h4><canvas id="behavior-canvas" width="250" height="100"></canvas></div>')
+$('body').append(behaviorCanvas);
+$("#behavior-container").css('pointer-events', 'none');
+
+var behaviorCtx=$('#behavior-canvas').get(0).getContext("2d");

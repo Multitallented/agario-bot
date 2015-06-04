@@ -74,17 +74,18 @@ function distance(organism1, organism2) {
 	return Math.sqrt(Math.pow(organism1.ox - organism2.ox, 2) + Math.pow(organism1.oy - organism2.oy, 2));
 }
 function getSplitDistance(eater) {
-	return eater.size * (3 - eater.size / 375) + 250;
+	//return eater.size * (3 - eater.size / 275) + 225;
+	return 660;
 }
 function getConsumeDistance(food, eater) {
 	return eater.size;
 }
 function canBeSplitEaten(food, eater) {
-	return food.mass * 1.15 < eater.mass / 2;
+	return food.mass * 1.18 < eater.mass / 2;
 }
 function canBeSplitAttacked(food, eater) {
-	return food.mass * 1.2 < eater.mass / 2;
+	return food.mass * 1.3 < eater.mass / 2;
 }
 function canBeEaten(food, eater) {
-	return eater.mass - food.mass > 15 && food.mass * 1.15 < eater.mass;
+	return eater.mass - food.mass > 15 && food.mass * 1.18 < eater.mass;
 }
