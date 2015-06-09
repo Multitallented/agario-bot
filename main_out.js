@@ -1,2145 +1,1224 @@
 $('#canvas').after($('#canvas').clone().attr('id','canvas-2')).remove();
-(function(self, $) {
-    /**
-     * @return {undefined}
-     */
-    function init() {
-        /** @type {boolean} */
-        ea = true;
-        update();
-        setInterval(update, 18E4);
-        /** @type {(HTMLElement|null)} */
-        canvas = cv = document.getElementById("canvas-2");
-        ctx = canvas.getContext("2d");
-        /**
-         * @param {Event} e
-         * @return {undefined}
-         */
-        canvas.onmousedown = function(e) {
-            if (options) {
-                /** @type {number} */
-                var z0 = e.clientX - (5 + width / 5 / 2);
-                /** @type {number} */
-                var z1 = e.clientY - (5 + width / 5 / 2);
-                if (Math.sqrt(z0 * z0 + z1 * z1) <= width / 5 / 2) {
-                    emit();
-                    registerEvent(17);
-                    return;
-                }
-            }
-            mx = e.clientX;
-            y = e.clientY;
-            triggerObjectAt();
-            emit();
-        };
-        /**
-         * @param {Event} e
-         * @return {undefined}
-         */
-        canvas.onmousemove = function(e) {
-            mx = e.clientX;
-            y = e.clientY;
-            triggerObjectAt();
-        };
-        /**
-         * @param {?} evt
-         * @return {undefined}
-         */
-        canvas.onmouseup = function(evt) {
-        };
-        /** @type {boolean} */
-        var b = false;
-        /** @type {boolean} */
-        var a = false;
-        /** @type {boolean} */
-        var all = false;
-        /**
-         * @param {?} e
-         * @return {undefined}
-         */
-        self.onkeydown = function(e) {
-            if (!(32 != e.keyCode)) {
-                if (!b) {
-                    emit();
-                    registerEvent(17);
-                    /** @type {boolean} */
-                    b = true;
-                }
-            }
-            if (!(81 != e.keyCode)) {
-                if (!a) {
-                    registerEvent(18);
-                    /** @type {boolean} */
-                    a = true;
-                }
-            }
-            if (!(87 != e.keyCode)) {
-                if (!all) {
-                    emit();
-                    registerEvent(21);
-                    /** @type {boolean} */
-                    all = true;
-                }
-            }
-            if (27 == e.keyCode) {
-                post(true);
-            }
-        };
-        /**
-         * @param {?} event
-         * @return {undefined}
-         */
-        self.onkeyup = function(event) {
-            if (32 == event.keyCode) {
-                /** @type {boolean} */
-                b = false;
-            }
-            if (87 == event.keyCode) {
-                /** @type {boolean} */
-                all = false;
-            }
-            if (81 == event.keyCode) {
-                if (a) {
-                    registerEvent(19);
-                    /** @type {boolean} */
-                    a = false;
-                }
-            }
-        };
-        /**
-         * @return {undefined}
-         */
-        self.onblur = function() {
-            registerEvent(19);
-            /** @type {boolean} */
-            all = a = b = false;
-        };
-        /** @type {function (): undefined} */
-        self.onresize = onResize;
-        onResize();
-        if (self.requestAnimationFrame) {
-            self.requestAnimationFrame(anim);
-        } else {
-            setInterval(draw, 1E3 / 60);
-        }
-        setInterval(function() {
-            if (!window.botEnabled) {
-                emit();
-            }
-        }, 40);
-        if (currentValue) {
-            $("#region").val(currentValue);
-        }
-        refresh();
-        reset($("#region").val());
-        if (null == ws) {
-            if (currentValue) {
-                connect();
-            }
-        }
-        $("#overlays").show();
-    }
-    /**
-     * @return {undefined}
-     */
-    function processData() {
-        if (0.5 > ratio) {
-            /** @type {null} */
-            body = null;
-        } else {
-            /** @type {number} */
-            var v = Number.POSITIVE_INFINITY;
-            /** @type {number} */
-            var j = Number.POSITIVE_INFINITY;
-            /** @type {number} */
-            var bottom = Number.NEGATIVE_INFINITY;
-            /** @type {number} */
-            var maxY = Number.NEGATIVE_INFINITY;
-            /** @type {number} */
-            var newDuration = 0;
-            /** @type {number} */
-            var i = 0;
-            for (;i < arr.length;i++) {
-                if (arr[i].shouldRender()) {
-                    /** @type {number} */
-                    newDuration = Math.max(arr[i].size, newDuration);
-                    /** @type {number} */
-                    v = Math.min(arr[i].x, v);
-                    /** @type {number} */
-                    j = Math.min(arr[i].y, j);
-                    /** @type {number} */
-                    bottom = Math.max(arr[i].x, bottom);
-                    /** @type {number} */
-                    maxY = Math.max(arr[i].y, maxY);
-                }
-            }
-            body = QUAD.init({
-                minX : v - (newDuration + 100),
-                minY : j - (newDuration + 100),
-                maxX : bottom + (newDuration + 100),
-                maxY : maxY + (newDuration + 100)
-            });
-            /** @type {number} */
-            i = 0;
-            for (;i < arr.length;i++) {
-                if (v = arr[i], v.shouldRender()) {
-                    /** @type {number} */
-                    j = 0;
-                    for (;j < v.points.length;++j) {
-                        body.insert(v.points[j]);
-                    }
-                }
-            }
-        }
-    }
-    /**
-     * @return {undefined}
-     */
-    function triggerObjectAt() {
-        value = (mx - width / 2) / ratio + left;
-        x = (y - height / 2) / ratio + t;
-    }
-    /**
-     * @return {undefined}
-     */
-    function update() {
-        if (null == old) {
-            old = {};
-            $("#region").children().each(function() {
-                var option = $(this);
-                var name = option.val();
-                if (name) {
-                    old[name] = option.text();
-                }
-            });
-        }
-        $.get("http://m.agar.io/info", function(b) {
-            var testSource = {};
-            var name;
-            for (name in b.regions) {
-                /** @type {string} */
-                var sourceName = name.split(":")[0];
-                testSource[sourceName] = testSource[sourceName] || 0;
-                testSource[sourceName] += b.regions[name].numPlayers;
-            }
-            for (name in testSource) {
-                $('#region option[value="' + name + '"]').text(old[name] + " (" + testSource[name] + " players)");
-            }
-        }, "json");
-    }
-    /**
-     * @return {undefined}
-     */
-    function _hide() {
-        $("#adsBottom").hide();
-        $("#overlays").hide();
-        refresh();
-    }
-    /**
-     * @param {string} value
-     * @return {undefined}
-     */
-    function reset(value) {
-        if (value) {
-            if (value != currentValue) {
-                if ($("#region").val() != value) {
-                    $("#region").val(value);
-                }
-                currentValue = self.localStorage.location = value;
-                $(".region-message").hide();
-                $(".region-message." + value).show();
-                $(".btn-needs-server").prop("disabled", false);
-                if (ea) {
-                    connect();
-                }
-            }
-        }
-    }
-    /**
-     * @param {boolean} recurring
-     * @return {undefined}
-     */
-    function post(recurring) {
-        /** @type {null} */
-        n = null;
-        $("#overlays").fadeIn(recurring ? 200 : 3E3);
-        if (!recurring) {
-            $("#adsBottom").fadeIn(3E3);
-        }
-    }
-    /**
-     * @return {undefined}
-     */
-    function refresh() {
-        if ($("#region").val()) {
-            self.localStorage.location = $("#region").val();
-        } else {
-            if (self.localStorage.location) {
-                $("#region").val(self.localStorage.location);
-            }
-        }
-        if ($("#region").val()) {
-            $("#locationKnown").append($("#region"));
-        } else {
-            $("#locationUnknown").append($("#region"));
-        }
-    }
-    /**
-     * @return {undefined}
-     */
-    function next() {
-        console.log("Find " + currentValue + dest);
-        $.ajax("http://m.agar.io/", {
-            /**
-             * @return {undefined}
-             */
-            error : function() {
-                setTimeout(next, 1E3);
-            },
-            /**
-             * @param {string} status
-             * @return {undefined}
-             */
-            success : function(status) {
-                status = status.split("\n");
-                $('#ip-address').html(status[0])
-                open("ws://" + status[0]);
-            },
-            dataType : "text",
-            method : "POST",
-            cache : false,
-            crossDomain : true,
-            data : currentValue + dest || "?"
-        });
-    }
-    /**
-     * @return {undefined}
-     */
-    function connect() {
-        if (ea) {
-            if (currentValue) {
-                $("#connecting").show();
-                next();
-            }
-        }
-    }
-    /**
-     * @param {string} url
-     * @return {undefined}
-     */
-    function open(url) {
-        if (ws) {
-            /** @type {null} */
-            ws.onopen = null;
-            /** @type {null} */
-            ws.onmessage = null;
-            /** @type {null} */
-            ws.onclose = null;
-            try {
-                ws.close();
-            } catch (b) {
-            }
-            /** @type {null} */
-            ws = null;
-        }
-        /** @type {Array} */
-        params = [];
-        /** @type {Array} */
-        data = [];
-        nodes = {};
-        /** @type {Array} */
-        arr = [];
-        /** @type {Array} */
-        sprites = [];
-        /** @type {Array} */
-        users = [];
-        /** @type {null} */
-        img = angles = null;
-        /** @type {number} */
-        closingAnimationTime = 0;
-        console.log("Connecting to " + url);
-        /** @type {WebSocket} */
-        ws = new WebSocket(url);
-        /** @type {string} */
-        ws.binaryType = "arraybuffer";
-        /** @type {function (ArrayBuffer): undefined} */
-        ws.onopen = listener;
-        /** @type {function (number): undefined} */
-        ws.onmessage = parse;
-        /** @type {function (?): undefined} */
-        ws.onclose = report;
-        /**
-         * @return {undefined}
-         */
-        ws.onerror = function() {
-            console.log("socket error");
-        };
-    }
-    /**
-     * @param {ArrayBuffer} data
-     * @return {undefined}
-     */
-    function listener(data) {
-        /** @type {number} */
-        backoff = 500;
-        $("#connecting").hide();
-        console.log("socket open");
-        /** @type {ArrayBuffer} */
-        data = new ArrayBuffer(5);
-        /** @type {DataView} */
-        var view = new DataView(data);
-        view.setUint8(0, 254);
-        view.setUint32(1, 4, true);
-        ws.send(data);
-        /** @type {ArrayBuffer} */
-        data = new ArrayBuffer(5);
-        /** @type {DataView} */
-        view = new DataView(data);
-        view.setUint8(0, 255);
-        view.setUint32(1, 1, true);
-        ws.send(data);
-        write();
-    }
-    /**
-     * @param {?} failing_message
-     * @return {undefined}
-     */
-    function report(failing_message) {
-        console.log("socket close");
-        setTimeout(connect, backoff);
-        backoff *= 1.5;
-    }
-    /**
-     * @param {number} n
-     * @return {undefined}
-     */
-    function parse(n) {
-        /**
-         * @return {?}
-         */
-        function encode() {
-            /** @type {string} */
-            var str = "";
-            for (;;) {
-                /** @type {number} */
-                var b = d.getUint16(offset, true);
-                offset += 2;
-                if (0 == b) {
-                    break;
-                }
-                str += String.fromCharCode(b);
-            }
-            return str;
-        }
-        /** @type {number} */
-        var offset = 1;
-        /** @type {DataView} */
-        var d = new DataView(n.data);
-        switch(d.getUint8(0)) {
-            case 16:
-                run(d);
-                break;
-            case 17:
-                /** @type {number} */
-                l = d.getFloat32(1, true);
-                /** @type {number} */
-                b = d.getFloat32(5, true);
-                /** @type {number} */
-                px = d.getFloat32(9, true);
-                break;
-            case 20:
-                /** @type {Array} */
-                data = [];
-                /** @type {Array} */
-                params = [];
-                break;
-            case 32:
-                params.push(d.getUint32(1, true));
-                break;
-            case 49:
-                if (null != angles) {
-                    break;
-                }
-                /** @type {number} */
-                n = d.getUint32(offset, true);
-                offset += 4;
-                /** @type {Array} */
-                users = [];
-                /** @type {number} */
-                var i = 0;
-                for (;i < n;++i) {
-                    /** @type {number} */
-                    var token = d.getUint32(offset, true);
-                    offset = offset + 4;
-                    users.push({
-                        id : token,
-                        name : encode()
-                    });
-                }
-                render();
-                break;
-            case 50:
-                /** @type {Array} */
-                angles = [];
-                /** @type {number} */
-                n = d.getUint32(offset, true);
-                offset += 4;
-                /** @type {number} */
-                i = 0;
-                for (;i < n;++i) {
-                    angles.push(d.getFloat32(offset, true));
-                    offset += 4;
-                }
-                render();
-                break;
-            case 64:
-                /** @type {number} */
-                max = d.getFloat64(1, true);
-                /** @type {number} */
-                low = d.getFloat64(9, true);
-                /** @type {number} */
-                min = d.getFloat64(17, true);
-                /** @type {number} */
-                high = d.getFloat64(25, true);
-                /** @type {number} */
-                l = (min + max) / 2;
-                /** @type {number} */
-                b = (high + low) / 2;
-                /** @type {number} */
-                px = 1;
-                if (0 == data.length) {
-                    /** @type {number} */
-                    left = l;
-                    /** @type {number} */
-                    t = b;
-                    /** @type {number} */
-                    ratio = px;
-                }
-                ;
-        }
-    }
-    /**
-     * @param {DataView} buffer
-     * @return {undefined}
-     */
-    function run(buffer) {
-        /** @type {number} */
-        timestamp = +new Date;
-        /** @type {number} */
-        var len = Math.random();
-        /** @type {number} */
-        var offset = 1;
-        /** @type {boolean} */
-        ia = false;
-        var n = buffer.getUint16(offset, true);
-        /** @type {number} */
-        offset = offset + 2;
-        /** @type {number} */
-        var i = 0;
-        for (;i < n;++i) {
-            var current = nodes[buffer.getUint32(offset, true)];
-            var that = nodes[buffer.getUint32(offset + 4, true)];
-            /** @type {number} */
-            offset = offset + 8;
-            if (current) {
-                if (that) {
-                    that.destroy();
-                    that.ox = that.x;
-                    that.oy = that.y;
-                    that.oSize = that.size;
-                    that.nx = current.x;
-                    that.ny = current.y;
-                    that.nSize = that.size;
-                    /** @type {number} */
-                    that.updateTime = timestamp;
-                }
-            }
-        }
-        /** @type {number} */
-        i = 0;
-        for (;;) {
-            n = buffer.getUint32(offset, true);
-            offset += 4;
-            if (0 == n) {
-                break;
-            }
-            ++i;
-            var chunk;
-            current = buffer.getInt16(offset, true);
-            /** @type {number} */
-            offset = offset + 2;
-            that = buffer.getInt16(offset, true);
-            /** @type {number} */
-            offset = offset + 2;
-            chunk = buffer.getInt16(offset, true);
-            /** @type {number} */
-            offset = offset + 2;
-            var m = buffer.getUint8(offset++);
-            var compassResult = buffer.getUint8(offset++);
-            var b = buffer.getUint8(offset++);
-            /** @type {string} */
-            m = (m << 16 | compassResult << 8 | b).toString(16);
-            for (;6 > m.length;) {
-                /** @type {string} */
-                m = "0" + m;
-            }
-            /** @type {string} */
-            m = "#" + m;
-            var self = buffer.getUint8(offset++);
-            /** @type {boolean} */
-            compassResult = !!(self & 1);
-            /** @type {boolean} */
-            b = !!(self & 16);
-            if (self & 2) {
-                offset += 4;
-            }
-            if (self & 4) {
-                offset += 8;
-            }
-            if (self & 8) {
-                offset += 16;
-            }
-            var c;
-            /** @type {string} */
-            self = "";
-            for (;;) {
-                c = buffer.getUint16(offset, true);
-                offset += 2;
-                if (0 == c) {
-                    break;
-                }
-                self += String.fromCharCode(c);
-            }
-            /** @type {string} */
-            c = self;
-            /** @type {null} */
-            self = null;
-            if (nodes.hasOwnProperty(n)) {
-                self = nodes[n];
-                self.updatePos();
-                self.ox = self.x;
-                self.oy = self.y;
-                self.oSize = self.size;
-                /** @type {string} */
-                self.color = m;
-            } else {
-                self = new move(n, current, that, chunk, m, c);
-                self.pX = current;
-                self.pY = that;
-            }
-            /** @type {boolean} */
-            self.isVirus = compassResult;
-            /** @type {boolean} */
-            self.isAgitated = b;
-            self.nx = current;
-            self.ny = that;
-            self.nSize = chunk;
-            /** @type {number} */
-            self.updateCode = len;
-            /** @type {number} */
-            self.updateTime = timestamp;
-            if (-1 != params.indexOf(n)) {
-                if (-1 == data.indexOf(self)) {
-                    /** @type {string} */
-                    document.getElementById("overlays").style.display = "none";
-                    data.push(self);
-                    if (1 == data.length) {
-                        left = self.x;
-                        t = self.y;
-                    }
-                }
-            }
-        }
-        len = buffer.getUint32(offset, true);
-        offset += 4;
-        /** @type {number} */
-        i = 0;
-        for (;i < len;i++) {
-            n = buffer.getUint32(offset, true);
-            offset += 4;
-            self = nodes[n];
-            if (null != self) {
-                self.destroy();
-            }
-        }
-        if (ia) {
-            if (0 == data.length) {
-                post(false);
-            }
-        }
-    }
-    /**
-     * @return {undefined}
-     */
-    function emit() {
-        if (queue()) {
-            /** @type {number} */
-            var z0 = mx - width / 2;
-            /** @type {number} */
-            var z1 = y - height / 2;
-            if (!(64 > z0 * z0 + z1 * z1)) {
-                if (!(el == value && type == x)) {
-                    el = value;
-                    type = x;
-                    /** @type {ArrayBuffer} */
-                    z0 = new ArrayBuffer(21);
-                    /** @type {DataView} */
-                    z1 = new DataView(z0);
-                    z1.setUint8(0, 16);
-                    z1.setFloat64(1, value, true);
-                    z1.setFloat64(9, x, true);
-                    z1.setUint32(17, 0, true);
-                    ws.send(z0);
-                }
-            }
-        }
-    }
-    /**
-     * @return {undefined}
-     */
-    function write() {
-        if (queue() && null != n) {
-            /** @type {ArrayBuffer} */
-            var buf = new ArrayBuffer(1 + 2 * n.length);
-            /** @type {DataView} */
-            var view = new DataView(buf);
-            view.setUint8(0, 0);
-            /** @type {number} */
-            var i = 0;
-            for (;i < n.length;++i) {
-                view.setUint16(1 + 2 * i, n.charCodeAt(i), true);
-            }
-            ws.send(buf);
-        }
-    }
-    /**
-     * @return {?}
-     */
-    function queue() {
-        return null != ws && ws.readyState == ws.OPEN;
-    }
-    /**
-     * @param {number} expectedNumberOfNonCommentArgs
-     * @return {undefined}
-     */
-    function registerEvent(expectedNumberOfNonCommentArgs) {
-        if (queue()) {
-            /** @type {ArrayBuffer} */
-            var buf = new ArrayBuffer(1);
-            (new DataView(buf)).setUint8(0, expectedNumberOfNonCommentArgs);
-            ws.send(buf);
-        }
-    }
-    /**
-     * @return {undefined}
-     */
-    function anim() {
-        draw();
-        self.requestAnimationFrame(anim);
-    }
-    /**
-     * @return {undefined}
-     */
-    function onResize() {
-        /** @type {number} */
-        width = self.innerWidth;
-        /** @type {number} */
-        height = self.innerHeight;
-        /** @type {number} */
-        cv.width = canvas.width = width;
-        /** @type {number} */
-        cv.height = canvas.height = height;
-        draw();
-    }
-    /**
-     * @return {undefined}
-     */
-    function build() {
-        if (0 != data.length) {
-            /** @type {number} */
-            var offset = 0;
-            /** @type {number} */
-            var i = 0;
-            for (;i < data.length;i++) {
-                offset += data[i].size;
-            }
-            /** @type {number} */
-            offset = Math.pow(Math.min(64 / offset, 1), 0.4) * Math.max(height / 1080, width / 1920);
-            /** @type {number} */
-            ratio = (9 * ratio + offset) / 10;
-        }
-    }
-    /**
-     * @return {undefined}
-     */
-    function draw() {
-        /** @type {number} */
-        var tick = +new Date;
-        ++La;
-        /** @type {number} */
-        timestamp = +new Date;
-        if (0 < data.length) {
-            build();
-            /** @type {number} */
-            var w = 0;
-            /** @type {number} */
-            var d = 0;
-            /** @type {number} */
-            var i = 0;
-            for (;i < data.length;i++) {
-                data[i].updatePos();
-                w += data[i].x / data.length;
-                d += data[i].y / data.length;
-            }
-            /** @type {number} */
-            l = w;
-            /** @type {number} */
-            b = d;
-            px = ratio;
-            /** @type {number} */
-            left = (left + w) / 2;
-            /** @type {number} */
-            t = (t + d) / 2;
-        } else {
-            /** @type {number} */
-            left = (29 * left + l) / 30;
-            /** @type {number} */
-            t = (29 * t + b) / 30;
-            /** @type {number} */
-            ratio = (9 * ratio + px) / 10;
-        }
-        processData();
-        triggerObjectAt();
-        ctx.clearRect(0, 0, width, height);
-        /** @type {string} */
-        ctx.fillStyle = color ? "#111111" : "#F2FBFF";
-        ctx.fillRect(0, 0, width, height);
-        ctx.save();
-        /** @type {string} */
-        ctx.strokeStyle = color ? "#AAAAAA" : "#000000";
-        /** @type {number} */
-        ctx.globalAlpha = 0.2;
-        ctx.scale(ratio, ratio);
-        /** @type {number} */
-        w = width / ratio;
-        /** @type {number} */
-        d = height / ratio;
-        /** @type {number} */
-        i = -0.5 + (-left + w / 2) % 50;
-        for (;i < w;i += 50) {
-            ctx.beginPath();
-            ctx.moveTo(i, 0);
-            ctx.lineTo(i, d);
-            ctx.stroke();
-        }
-        /** @type {number} */
-        i = -0.5 + (-t + d / 2) % 50;
-        for (;i < d;i += 50) {
-            ctx.beginPath();
-            ctx.moveTo(0, i);
-            ctx.lineTo(w, i);
-            ctx.stroke();
-        }
-        ctx.restore();
-        arr.sort(function(a, b) {
-            return a.size == b.size ? a.id - b.id : a.size - b.size;
-        });
-        ctx.save();
-        ctx.translate(width / 2, height / 2);
-        ctx.scale(ratio, ratio);
-        ctx.translate(-left, -t);
-        /** @type {number} */
-        i = 0;
-        for (;i < sprites.length;i++) {
-            sprites[i].draw();
-        }
-        /** @type {number} */
-        i = 0;
-        for (;i < arr.length;i++) {
-            arr[i].draw();
-        }
-        ai.draw(ctx)
-        ctx.restore();
-        if (img) {
-            if (img.width) {
-                ctx.drawImage(img, width - img.width - 10, 10);
-            }
-        }
-        /** @type {number} */
-        closingAnimationTime = Math.max(closingAnimationTime, getHeight());
-        if (0 != closingAnimationTime) {
-            if (null == button) {
-                button = new SVGPlotFunction(24, "#FFFFFF");
-            }
-            button.setValue("Score: " + ~~(closingAnimationTime / 100));
-            d = button.render();
-            w = d.width;
-            /** @type {number} */
-            ctx.globalAlpha = 0.2;
-            /** @type {string} */
-            ctx.fillStyle = "#000000";
-            ctx.fillRect(10, height - 10 - 24 - 10, w + 10, 34);
-            /** @type {number} */
-            ctx.globalAlpha = 1;
-            ctx.drawImage(d, 15, height - 10 - 24 - 5);
-        }
-        clear();
-        /** @type {number} */
-        tick = +new Date - tick;
-        if (tick > 1E3 / 60) {
-            n_players -= 0.01;
-        } else {
-            if (tick < 1E3 / 65) {
-                n_players += 0.01;
-            }
-        }
-        if (0.4 > n_players) {
-            /** @type {number} */
-            n_players = 0.4;
-        }
-        if (1 < n_players) {
-            /** @type {number} */
-            n_players = 1;
-        }
-    }
-    /**
-     * @return {undefined}
-     */
-    function clear() {
-        if (options && copy.width) {
-            /** @type {number} */
-            var dim = width / 5;
-            ctx.drawImage(copy, 5, 5, dim, dim);
-        }
-    }
-    /**
-     * @return {?}
-     */
-    function getHeight() {
-        /** @type {number} */
-        var value = 0;
-        /** @type {number} */
-        var byteIndex = 0;
-        for (;byteIndex < data.length;byteIndex++) {
-            value += data[byteIndex].nSize * data[byteIndex].nSize;
-        }
-        return value;
-    }
-    /**
-     * @return {undefined}
-     */
-    function render() {
-        /** @type {null} */
-        img = null;
-        if (null != angles || 0 != users.length) {
-            if (null != angles || $timeout) {
-                /** @type {Element} */
-                img = document.createElement("canvas");
-                var ctx = img.getContext("2d");
-                /** @type {number} */
-                var i = 60;
-                /** @type {number} */
-                i = null == angles ? i + 24 * users.length : i + 180;
-                /** @type {number} */
-                var d = Math.min(200, 0.3 * width) / 200;
-                /** @type {number} */
-                img.width = 200 * d;
-                /** @type {number} */
-                img.height = i * d;
-                ctx.scale(d, d);
-                /** @type {number} */
-                ctx.globalAlpha = 0.4;
-                /** @type {string} */
-                ctx.fillStyle = "#000000";
-                ctx.fillRect(0, 0, 200, i);
-                /** @type {number} */
-                ctx.globalAlpha = 1;
-                /** @type {string} */
-                ctx.fillStyle = "#FFFFFF";
-                /** @type {null} */
-                d = null;
-                /** @type {string} */
-                d = "Leaderboard";
-                /** @type {string} */
-                ctx.font = "30px Ubuntu";
-                ctx.fillText(d, 100 - ctx.measureText(d).width / 2, 40);
-                if (null == angles) {
-                    /** @type {string} */
-                    ctx.font = "20px Ubuntu";
-                    /** @type {number} */
-                    i = 0;
-                    for (;i < users.length;++i) {
-                        d = users[i].name || "An unnamed cell";
-                        if (!$timeout) {
-                            /** @type {string} */
-                            d = "An unnamed cell";
-                        }
-                        if (-1 != params.indexOf(users[i].id)) {
-                            if (data[0].name) {
-                                d = data[0].name;
-                            }
-                            /** @type {string} */
-                            ctx.fillStyle = "#FFAAAA";
-                        } else {
-                            /** @type {string} */
-                            ctx.fillStyle = "#FFFFFF";
-                        }
-                        /** @type {string} */
-                        d = i + 1 + ". " + d;
-                        ctx.fillText(d, 100 - ctx.measureText(d).width / 2, 70 + 24 * i);
-                    }
-                } else {
-                    /** @type {number} */
-                    i = d = 0;
-                    for (;i < angles.length;++i) {
-                        /** @type {number} */
-                        angEnd = d + angles[i] * Math.PI * 2;
-                        ctx.fillStyle = cs[i + 1];
-                        ctx.beginPath();
-                        ctx.moveTo(100, 140);
-                        ctx.arc(100, 140, 80, d, angEnd, false);
-                        ctx.fill();
-                        /** @type {number} */
-                        d = angEnd;
-                    }
-                }
-            }
-        }
-    }
-    /**
-     * @param {?} id
-     * @param {number} x
-     * @param {number} y
-     * @param {number} size
-     * @param {string} color
-     * @param {string} i
-     * @return {undefined}
-     */
-    function move(id, x, y, size, color, i) {
-        arr.push(this);
-        nodes[id] = this;
-        this.id = id;
-        this.ox = this.x = x;
-        this.oy = this.y = y;
-        this.oSize = this.size = size;
-        /** @type {string} */
-        this.color = color;
-        /** @type {Array} */
-        this.points = [];
-        /** @type {Array} */
-        this.pointsAcc = [];
-        this.createPoints();
-        this.setName(i);
-    }
-    /**
-     * @param {number} n
-     * @param {?} Var
-     * @param {?} stroke
-     * @param {string} plot
-     * @return {undefined}
-     */
-    function SVGPlotFunction(n, Var, stroke, plot) {
-        if (n) {
-            /** @type {number} */
-            this._size = n;
-        }
-        if (Var) {
-            this._color = Var;
-        }
-        /** @type {boolean} */
-        this._stroke = !!stroke;
-        if (plot) {
-            /** @type {string} */
-            this._strokeColor = plot;
-        }
-    }
-    if ("agar.io" != self.location.hostname && ("localhost" != self.location.hostname && "10.10.2.13" != self.location.hostname)) {
-        /** @type {string} */
-        self.location = "http://agar.io/";
-    } else {
-        if (self.top != self) {
-            /** @type {string} */
-            self.top.location = "http://agar.io/";
-        } else {
-            var cv;
-            var ctx;
-            var canvas;
-            var width;
-            var height;
-            /** @type {null} */
-            var body = null;
-            /** @type {null} */
-            var ws = null;
-            /** @type {number} */
-            var left = 0;
-            /** @type {number} */
-            var t = 0;
-            /** @type {Array} */
-            var params = [];
-            /** @type {Array} */
-            var data = [];
-            var nodes = {};
-            /** @type {Array} */
-            var arr = [];
-            /** @type {Array} */
-            var sprites = [];
-            /** @type {Array} */
-            var users = [];
-            /** @type {number} */
-            var mx = 0;
-            /** @type {number} */
-            var y = 0;
-            /** @type {number} */
-            var value = -1;
-            /** @type {number} */
-            var x = -1;
-            /** @type {number} */
-            var La = 0;
-            /** @type {number} */
-            var timestamp = 0;
-            /** @type {null} */
-            var n = null;
-            /** @type {number} */
-            var max = 0;
-            /** @type {number} */
-            var low = 0;
-            /** @type {number} */
-            var min = 1E4;
-            /** @type {number} */
-            var high = 1E4;
-            /** @type {number} */
-            var ratio = 1;
-            /** @type {null} */
-            var currentValue = null;
-            /** @type {boolean} */
-            var text = true;
-            /** @type {boolean} */
-            var $timeout = true;
-            /** @type {boolean} */
-            var doneResults = false;
-            /** @type {boolean} */
-            var ia = false;
-            /** @type {number} */
-            var closingAnimationTime = 0;
-            /** @type {boolean} */
-            var color = false;
-            /** @type {boolean} */
-            var result = false;
-            /** @type {number} */
-            var l = left = ~~((max + min) / 2);
-            /** @type {number} */
-            var b = t = ~~((low + high) / 2);
-            /** @type {number} */
-            var px = 1;
-            /** @type {string} */
-            var dest = "";
-            /** @type {null} */
-            var angles = null;
-            /** @type {boolean} */
-            var ea = false;
-            /** @type {number} */
-            var elem = 0;
-            /** @type {Array} */
-            var cs = ["#333333", "#FF3333", "#33FF33", "#3333FF"];
-            /** @type {boolean} */
-            var options = "ontouchstart" in self && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            /** @type {Image} */
-            var copy = new Image;
-            /** @type {string} */
-            copy.src = "img/split.png";
-            /** @type {Element} */
-            elem = document.createElement("canvas");
-            if ("undefined" == typeof console || ("undefined" == typeof DataView || ("undefined" == typeof WebSocket || (null == elem || (null == elem.getContext || null == self.localStorage))))) {
-                alert("You browser does not support this game, we recommend you to use Firefox to play this");
-            } else {
-                /** @type {null} */
-                var old = null;
-                /**
-                 * @param {Function} step
-                 * @return {undefined}
-                 */
-                self.setNick = function(step) {
-                    _hide();
-                    /** @type {Function} */
-                    n = step;
-                    write();
-                    /** @type {number} */
-                    closingAnimationTime = 0;
-                };
-                /** @type {function (string): undefined} */
-                self.setRegion = reset;
-                /**
-                 * @param {boolean} textAlt
-                 * @return {undefined}
-                 */
-                self.setSkins = function(textAlt) {
-                    /** @type {boolean} */
-                    text = textAlt;
-                };
-                /**
-                 * @param {boolean} _$timeout_
-                 * @return {undefined}
-                 */
-                self.setNames = function(_$timeout_) {
-                    /** @type {boolean} */
-                    $timeout = _$timeout_;
-                };
-                /**
-                 * @param {boolean} newColor
-                 * @return {undefined}
-                 */
-                self.setDarkTheme = function(newColor) {
-                    /** @type {boolean} */
-                    color = newColor;
-                };
-                /**
-                 * @param {boolean} data
-                 * @return {undefined}
-                 */
-                self.setColors = function(data) {
-                    /** @type {boolean} */
-                    doneResults = data;
-                };
-                /**
-                 * @param {boolean} subKey
-                 * @return {undefined}
-                 */
-                self.setShowMass = function(subKey) {
-                    /** @type {boolean} */
-                    result = subKey;
-                };
-                /**
-                 * @return {undefined}
-                 */
-                self.spectate = function() {
-                    /** @type {null} */
-                    n = null;
-                    registerEvent(1);
-                    _hide();
-                };
-                /**
-                 * @param {number} mat
-                 * @return {undefined}
-                 */
-                self.setGameMode = function(mat) {
-                    if (mat != dest) {
-                        /** @type {number} */
-                        dest = mat;
-                        connect();
-                    }
-                };
-                if (null != self.localStorage) {
-                    if (null == self.localStorage.AB8) {
-                        /** @type {number} */
-                        self.localStorage.AB8 = 0 + ~~(100 * Math.random());
-                    }
-                    /** @type {number} */
-                    elem = +self.localStorage.AB8;
-                    /** @type {number} */
-                    self.ABGroup = elem;
-                }
-                $.get("http://gc.agar.io", function(prop) {
-                    var name = prop.split(" ");
-                    prop = name[0];
-                    name = name[1] || "";
-                    if (-1 == "DE IL PL HU BR AT".split(" ").indexOf(prop)) {
-                        numbers.push("nazi");
-                    }
-                    if (input.hasOwnProperty(prop)) {
-                        if ("string" == typeof input[prop]) {
-                            if (!currentValue) {
-                                reset(input[prop]);
-                            }
-                        } else {
-                            if (input[prop].hasOwnProperty(name)) {
-                                if (!currentValue) {
-                                    reset(input[prop][name]);
-                                }
-                            }
-                        }
-                    }
-                }, "text");
-                setTimeout(function() {
-                }, 3E5);
-                var input = {
-                    AF : "JP-Tokyo",
-                    AX : "EU-London",
-                    AL : "EU-London",
-                    DZ : "EU-London",
-                    AS : "SG-Singapore",
-                    AD : "EU-London",
-                    AO : "EU-London",
-                    AI : "US-Atlanta",
-                    AG : "US-Atlanta",
-                    AR : "BR-Brazil",
-                    AM : "JP-Tokyo",
-                    AW : "US-Atlanta",
-                    AU : "SG-Singapore",
-                    AT : "EU-London",
-                    AZ : "JP-Tokyo",
-                    BS : "US-Atlanta",
-                    BH : "JP-Tokyo",
-                    BD : "JP-Tokyo",
-                    BB : "US-Atlanta",
-                    BY : "EU-London",
-                    BE : "EU-London",
-                    BZ : "US-Atlanta",
-                    BJ : "EU-London",
-                    BM : "US-Atlanta",
-                    BT : "JP-Tokyo",
-                    BO : "BR-Brazil",
-                    BQ : "US-Atlanta",
-                    BA : "EU-London",
-                    BW : "EU-London",
-                    BR : "BR-Brazil",
-                    IO : "JP-Tokyo",
-                    VG : "US-Atlanta",
-                    BN : "JP-Tokyo",
-                    BG : "EU-London",
-                    BF : "EU-London",
-                    BI : "EU-London",
-                    KH : "JP-Tokyo",
-                    CM : "EU-London",
-                    CA : "US-Atlanta",
-                    CV : "EU-London",
-                    KY : "US-Atlanta",
-                    CF : "EU-London",
-                    TD : "EU-London",
-                    CL : "BR-Brazil",
-                    CN : "CN-China",
-                    CX : "JP-Tokyo",
-                    CC : "JP-Tokyo",
-                    CO : "BR-Brazil",
-                    KM : "EU-London",
-                    CD : "EU-London",
-                    CG : "EU-London",
-                    CK : "SG-Singapore",
-                    CR : "US-Atlanta",
-                    CI : "EU-London",
-                    HR : "EU-London",
-                    CU : "US-Atlanta",
-                    CW : "US-Atlanta",
-                    CY : "JP-Tokyo",
-                    CZ : "EU-London",
-                    DK : "EU-London",
-                    DJ : "EU-London",
-                    DM : "US-Atlanta",
-                    DO : "US-Atlanta",
-                    EC : "BR-Brazil",
-                    EG : "EU-London",
-                    SV : "US-Atlanta",
-                    GQ : "EU-London",
-                    ER : "EU-London",
-                    EE : "EU-London",
-                    ET : "EU-London",
-                    FO : "EU-London",
-                    FK : "BR-Brazil",
-                    FJ : "SG-Singapore",
-                    FI : "EU-London",
-                    FR : "EU-London",
-                    GF : "BR-Brazil",
-                    PF : "SG-Singapore",
-                    GA : "EU-London",
-                    GM : "EU-London",
-                    GE : "JP-Tokyo",
-                    DE : "EU-London",
-                    GH : "EU-London",
-                    GI : "EU-London",
-                    GR : "EU-London",
-                    GL : "US-Atlanta",
-                    GD : "US-Atlanta",
-                    GP : "US-Atlanta",
-                    GU : "SG-Singapore",
-                    GT : "US-Atlanta",
-                    GG : "EU-London",
-                    GN : "EU-London",
-                    GW : "EU-London",
-                    GY : "BR-Brazil",
-                    HT : "US-Atlanta",
-                    VA : "EU-London",
-                    HN : "US-Atlanta",
-                    HK : "JP-Tokyo",
-                    HU : "EU-London",
-                    IS : "EU-London",
-                    IN : "JP-Tokyo",
-                    ID : "JP-Tokyo",
-                    IR : "JP-Tokyo",
-                    IQ : "JP-Tokyo",
-                    IE : "EU-London",
-                    IM : "EU-London",
-                    IL : "JP-Tokyo",
-                    IT : "EU-London",
-                    JM : "US-Atlanta",
-                    JP : "JP-Tokyo",
-                    JE : "EU-London",
-                    JO : "JP-Tokyo",
-                    KZ : "JP-Tokyo",
-                    KE : "EU-London",
-                    KI : "SG-Singapore",
-                    KP : "JP-Tokyo",
-                    KR : "JP-Tokyo",
-                    KW : "JP-Tokyo",
-                    KG : "JP-Tokyo",
-                    LA : "JP-Tokyo",
-                    LV : "EU-London",
-                    LB : "JP-Tokyo",
-                    LS : "EU-London",
-                    LR : "EU-London",
-                    LY : "EU-London",
-                    LI : "EU-London",
-                    LT : "EU-London",
-                    LU : "EU-London",
-                    MO : "JP-Tokyo",
-                    MK : "EU-London",
-                    MG : "EU-London",
-                    MW : "EU-London",
-                    MY : "JP-Tokyo",
-                    MV : "JP-Tokyo",
-                    ML : "EU-London",
-                    MT : "EU-London",
-                    MH : "SG-Singapore",
-                    MQ : "US-Atlanta",
-                    MR : "EU-London",
-                    MU : "EU-London",
-                    YT : "EU-London",
-                    MX : "US-Atlanta",
-                    FM : "SG-Singapore",
-                    MD : "EU-London",
-                    MC : "EU-London",
-                    MN : "JP-Tokyo",
-                    ME : "EU-London",
-                    MS : "US-Atlanta",
-                    MA : "EU-London",
-                    MZ : "EU-London",
-                    MM : "JP-Tokyo",
-                    NA : "EU-London",
-                    NR : "SG-Singapore",
-                    NP : "JP-Tokyo",
-                    NL : "EU-London",
-                    NC : "SG-Singapore",
-                    NZ : "SG-Singapore",
-                    NI : "US-Atlanta",
-                    NE : "EU-London",
-                    NG : "EU-London",
-                    NU : "SG-Singapore",
-                    NF : "SG-Singapore",
-                    MP : "SG-Singapore",
-                    NO : "EU-London",
-                    OM : "JP-Tokyo",
-                    PK : "JP-Tokyo",
-                    PW : "SG-Singapore",
-                    PS : "JP-Tokyo",
-                    PA : "US-Atlanta",
-                    PG : "SG-Singapore",
-                    PY : "BR-Brazil",
-                    PE : "BR-Brazil",
-                    PH : "JP-Tokyo",
-                    PN : "SG-Singapore",
-                    PL : "EU-London",
-                    PT : "EU-London",
-                    PR : "US-Atlanta",
-                    QA : "JP-Tokyo",
-                    RE : "EU-London",
-                    RO : "EU-London",
-                    RU : "RU-Russia",
-                    RW : "EU-London",
-                    BL : "US-Atlanta",
-                    SH : "EU-London",
-                    KN : "US-Atlanta",
-                    LC : "US-Atlanta",
-                    MF : "US-Atlanta",
-                    PM : "US-Atlanta",
-                    VC : "US-Atlanta",
-                    WS : "SG-Singapore",
-                    SM : "EU-London",
-                    ST : "EU-London",
-                    SA : "EU-London",
-                    SN : "EU-London",
-                    RS : "EU-London",
-                    SC : "EU-London",
-                    SL : "EU-London",
-                    SG : "JP-Tokyo",
-                    SX : "US-Atlanta",
-                    SK : "EU-London",
-                    SI : "EU-London",
-                    SB : "SG-Singapore",
-                    SO : "EU-London",
-                    ZA : "EU-London",
-                    SS : "EU-London",
-                    ES : "EU-London",
-                    LK : "JP-Tokyo",
-                    SD : "EU-London",
-                    SR : "BR-Brazil",
-                    SJ : "EU-London",
-                    SZ : "EU-London",
-                    SE : "EU-London",
-                    CH : "EU-London",
-                    SY : "EU-London",
-                    TW : "JP-Tokyo",
-                    TJ : "JP-Tokyo",
-                    TZ : "EU-London",
-                    TH : "JP-Tokyo",
-                    TL : "JP-Tokyo",
-                    TG : "EU-London",
-                    TK : "SG-Singapore",
-                    TO : "SG-Singapore",
-                    TT : "US-Atlanta",
-                    TN : "EU-London",
-                    TR : "TK-Turkey",
-                    TM : "JP-Tokyo",
-                    TC : "US-Atlanta",
-                    TV : "SG-Singapore",
-                    UG : "EU-London",
-                    UA : "EU-London",
-                    AE : "EU-London",
-                    GB : "EU-London",
-                    US : {
-                        AL : "US-Atlanta",
-                        AK : "US-Fremont",
-                        AZ : "US-Fremont",
-                        AR : "US-Atlanta",
-                        CA : "US-Fremont",
-                        CO : "US-Fremont",
-                        CT : "US-Atlanta",
-                        DE : "US-Atlanta",
-                        FL : "US-Atlanta",
-                        GA : "US-Atlanta",
-                        HI : "US-Fremont",
-                        ID : "US-Fremont",
-                        IL : "US-Atlanta",
-                        IN : "US-Atlanta",
-                        IA : "US-Atlanta",
-                        KS : "US-Atlanta",
-                        KY : "US-Atlanta",
-                        LA : "US-Atlanta",
-                        ME : "US-Atlanta",
-                        MD : "US-Atlanta",
-                        MA : "US-Atlanta",
-                        MI : "US-Atlanta",
-                        MN : "US-Fremont",
-                        MS : "US-Atlanta",
-                        MO : "US-Atlanta",
-                        MT : "US-Fremont",
-                        NE : "US-Fremont",
-                        NV : "US-Fremont",
-                        NH : "US-Atlanta",
-                        NJ : "US-Atlanta",
-                        NM : "US-Fremont",
-                        NY : "US-Atlanta",
-                        NC : "US-Atlanta",
-                        ND : "US-Fremont",
-                        OH : "US-Atlanta",
-                        OK : "US-Atlanta",
-                        OR : "US-Fremont",
-                        PA : "US-Atlanta",
-                        RI : "US-Atlanta",
-                        SC : "US-Atlanta",
-                        SD : "US-Fremont",
-                        TN : "US-Atlanta",
-                        TX : "US-Atlanta",
-                        UT : "US-Fremont",
-                        VT : "US-Atlanta",
-                        VA : "US-Atlanta",
-                        WA : "US-Fremont",
-                        WV : "US-Atlanta",
-                        WI : "US-Atlanta",
-                        WY : "US-Fremont",
-                        DC : "US-Atlanta",
-                        AS : "US-Atlanta",
-                        GU : "US-Atlanta",
-                        MP : "US-Atlanta",
-                        PR : "US-Atlanta",
-                        UM : "US-Atlanta",
-                        VI : "US-Atlanta"
-                    },
-                    UM : "SG-Singapore",
-                    VI : "US-Atlanta",
-                    UY : "BR-Brazil",
-                    UZ : "JP-Tokyo",
-                    VU : "SG-Singapore",
-                    VE : "BR-Brazil",
-                    VN : "JP-Tokyo",
-                    WF : "SG-Singapore",
-                    EH : "EU-London",
-                    YE : "JP-Tokyo",
-                    ZM : "EU-London",
-                    ZW : "EU-London"
-                };
-                /** @type {function (string): undefined} */
-                self.connect = open;
-                /** @type {number} */
-                var backoff = 500;
-                /** @type {number} */
-                var el = -1;
-                /** @type {number} */
-                var type = -1;
-                /** @type {null} */
-                var img = null;
-                /** @type {number} */
-                var n_players = 1;
-                /** @type {null} */
-                var button = null;
-                var imgs = {};
-                /** @type {Array.<string>} */
-                var numbers = "poland;usa;china;russia;canada;australia;spain;brazil;germany;ukraine;france;sweden;hitler;north korea;south korea;japan;united kingdom;earth;greece;latvia;lithuania;estonia;finland;norway;cia;maldivas;austria;nigeria;reddit;yaranaika;confederate;9gag;indiana;4chan;italy;ussr;bulgaria;tumblr;2ch.hk;hong kong;portugal;jamaica;german empire;mexico;sanik;switzerland;croatia;chile;indonesia;bangladesh;thailand;iran;iraq;peru;moon;botswana;bosnia;netherlands;european union;taiwan;pakistan;hungary;satanist;qing dynasty;matriarchy;patriarchy;feminism;ireland;texas;facepunch;prodota;cambodia;steam;piccolo;ea;india;kc;denmark;quebec;ayy lmao;sealand;bait;tsarist russia;origin;vinesauce;stalin;belgium;luxembourg;stussy;prussia;8ch;argentina;scotland;sir;romania;belarus;wojak;doge;nasa;byzantium;imperial japan;french kingdom;somalia;turkey;mars;pokerface;8".split(";");
-                /** @type {Array} */
-                var reserved = ["8", "nasa"];
-                /** @type {Array} */
-                var whitespace = ["m'blob"];
-                move.prototype = {
-                    id : 0,
-                    points : null,
-                    pointsAcc : null,
-                    name : null,
-                    nameCache : null,
-                    sizeCache : null,
-                    x : 0,
-                    y : 0,
-                    size : 0,
-                    ox : 0,
-                    oy : 0,
-                    oSize : 0,
-                    nx : 0,
-                    ny : 0,
-                    nSize : 0,
-                    updateTime : 0,
-                    updateCode : 0,
-                    drawTime : 0,
-                    destroyed : false,
-                    isVirus : false,
-                    isAgitated : false,
-                    wasSimpleDrawing : true,
-                    /**
-                     * @return {undefined}
-                     */
-                    destroy : function() {
-                        var start;
-                        /** @type {number} */
-                        start = 0;
-                        for (;start < arr.length;start++) {
-                            if (arr[start] == this) {
-                                arr.splice(start, 1);
-                                break;
-                            }
-                        }
-                        delete nodes[this.id];
-                        start = data.indexOf(this);
-                        if (-1 != start) {
-                            /** @type {boolean} */
-                            ia = true;
-                            data.splice(start, 1);
-                        }
-                        start = params.indexOf(this.id);
-                        if (-1 != start) {
-                            params.splice(start, 1);
-                        }
-                        /** @type {boolean} */
-                        this.destroyed = true;
-                        sprites.push(this);
-                    },
-                    /**
-                     * @return {?}
-                     */
-                    getNameSize : function() {
-                        return Math.max(~~(0.3 * this.size), 24);
-                    },
-                    /**
-                     * @param {string} name
-                     * @return {undefined}
-                     */
-                    setName : function(name) {
-                        if (this.name = name) {
-                            if (null == this.nameCache) {
-                                this.nameCache = new SVGPlotFunction(this.getNameSize(), "#FFFFFF", true, "#000000");
-                            } else {
-                                this.nameCache.setSize(this.getNameSize());
-                            }
-                            this.nameCache.setValue(this.name);
-                        }
-                    },
-                    /**
-                     * @return {undefined}
-                     */
-                    createPoints : function() {
-                        var max = this.getNumPoints();
-                        for (;this.points.length > max;) {
-                            /** @type {number} */
-                            var i = ~~(Math.random() * this.points.length);
-                            this.points.splice(i, 1);
-                            this.pointsAcc.splice(i, 1);
-                        }
-                        if (0 == this.points.length) {
-                            if (0 < max) {
-                                this.points.push({
-                                    c : this,
-                                    v : this.size,
-                                    x : this.x,
-                                    y : this.y
-                                });
-                                this.pointsAcc.push(Math.random() - 0.5);
-                            }
-                        }
-                        for (;this.points.length < max;) {
-                            /** @type {number} */
-                            i = ~~(Math.random() * this.points.length);
-                            var pt = this.points[i];
-                            this.points.splice(i, 0, {
-                                c : this,
-                                v : pt.v,
-                                x : pt.x,
-                                y : pt.y
-                            });
-                            this.pointsAcc.splice(i, 0, this.pointsAcc[i]);
-                        }
-                    },
-                    /**
-                     * @return {?}
-                     */
-                    getNumPoints : function() {
-                        /** @type {number} */
-                        var rh = 10;
-                        if (20 > this.size) {
-                            /** @type {number} */
-                            rh = 5;
-                        }
-                        if (this.isVirus) {
-                            /** @type {number} */
-                            rh = 30;
-                        }
-                        return~~Math.max(this.size * ratio * (this.isVirus ? Math.min(2 * n_players, 1) : n_players), rh);
-                    },
-                    /**
-                     * @return {undefined}
-                     */
-                    movePoints : function() {
-                        this.createPoints();
-                        var points = this.points;
-                        var data = this.pointsAcc;
-                        var n = points.length;
-                        /** @type {number} */
-                        var i = 0;
-                        for (;i < n;++i) {
-                            var alpha = data[(i - 1 + n) % n];
-                            var value = data[(i + 1) % n];
-                            data[i] += (Math.random() - 0.5) * (this.isAgitated ? 3 : 1);
-                            data[i] *= 0.7;
-                            if (10 < data[i]) {
-                                /** @type {number} */
-                                data[i] = 10;
-                            }
-                            if (-10 > data[i]) {
-                                /** @type {number} */
-                                data[i] = -10;
-                            }
-                            /** @type {number} */
-                            data[i] = (alpha + value + 8 * data[i]) / 10;
-                        }
-                        var INPUT = this;
-                        /** @type {number} */
-                        i = 0;
-                        for (;i < n;++i) {
-                            var c = points[i].v;
-                            alpha = points[(i - 1 + n) % n].v;
-                            value = points[(i + 1) % n].v;
-                            if (15 < this.size && null != body) {
-                                /** @type {boolean} */
-                                var l = false;
-                                var x = points[i].x;
-                                var y = points[i].y;
-                                body.retrieve2(x - 5, y - 5, 10, 10, function(target) {
-                                    if (target.c != INPUT) {
-                                        if (25 > (x - target.x) * (x - target.x) + (y - target.y) * (y - target.y)) {
-                                            /** @type {boolean} */
-                                            l = true;
-                                        }
-                                    }
-                                });
-                                if (!l) {
-                                    if (points[i].x < max || (points[i].y < low || (points[i].x > min || points[i].y > high))) {
-                                        /** @type {boolean} */
-                                        l = true;
-                                    }
-                                }
-                                if (l) {
-                                    if (0 < data[i]) {
-                                        /** @type {number} */
-                                        data[i] = 0;
-                                    }
-                                    data[i] -= 1;
-                                }
-                            }
-                            c += data[i];
-                            if (0 > c) {
-                                /** @type {number} */
-                                c = 0;
-                            }
-                            /** @type {number} */
-                            c = this.isAgitated ? (19 * c + this.size) / 20 : (12 * c + this.size) / 13;
-                            /** @type {number} */
-                            points[i].v = (alpha + value + 8 * c) / 10;
-                            /** @type {number} */
-                            alpha = 2 * Math.PI / n;
-                            value = this.points[i].v;
-                            if (this.isVirus) {
-                                if (0 == i % 2) {
-                                    value += 5;
-                                }
-                            }
-                            points[i].x = this.x + Math.cos(alpha * i) * value;
-                            points[i].y = this.y + Math.sin(alpha * i) * value;
-                        }
-                    },
-                    /**
-                     * @return {?}
-                     */
-                    updatePos : function() {
-                        var oy;
-                        /** @type {number} */
-                        oy = (timestamp - this.updateTime) / 120;
-                        /** @type {number} */
-                        oy = 0 > oy ? 0 : 1 < oy ? 1 : oy;
-                        /** @type {number} */
-                        var oSize = 0 > oy ? 0 : 1 < oy ? 1 : oy;
-                        this.getNameSize();
-                        if (this.destroyed && 1 <= oSize) {
-                            var idx = sprites.indexOf(this);
-                            if (-1 != idx) {
-                                sprites.splice(idx, 1);
-                            }
-                        }
-                        this.x = oy * (this.nx - this.ox) + this.ox;
-                        this.y = oy * (this.ny - this.oy) + this.oy;
-                        this.size = oSize * (this.nSize - this.oSize) + this.oSize;
-                        return oSize;
-                    },
-                    /**
-                     * @return {?}
-                     */
-                    shouldRender : function() {
-                        return this.x + this.size + 40 < left - width / 2 / ratio || (this.y + this.size + 40 < t - height / 2 / ratio || (this.x - this.size - 40 > left + width / 2 / ratio || this.y - this.size - 40 > t + height / 2 / ratio)) ? false : true;
-                    },
-                    /**
-                     * @return {undefined}
-                     */
-                    draw : function() {
-                        if (this.shouldRender()) {
-                            /** @type {boolean} */
-                            var y_position = !this.isVirus && (!this.isAgitated && 0.5 > ratio);
-                            if (this.wasSimpleDrawing && !y_position) {
-                                /** @type {number} */
-                                var c = 0;
-                                for (;c < this.points.length;c++) {
-                                    this.points[c].v = this.size;
-                                }
-                            }
-                            /** @type {boolean} */
-                            this.wasSimpleDrawing = y_position;
-                            ctx.save();
-                            this.drawTime = timestamp;
-                            c = this.updatePos();
-                            if (this.destroyed) {
-                                ctx.globalAlpha *= 1 - c;
-                            }
-                            /** @type {number} */
-                            ctx.lineWidth = 10;
-                            /** @type {string} */
-                            ctx.lineCap = "round";
-                            /** @type {string} */
-                            ctx.lineJoin = this.isVirus ? "mitter" : "round";
-                            if (doneResults) {
-                                /** @type {string} */
-                                ctx.fillStyle = "#FFFFFF";
-                                /** @type {string} */
-                                ctx.strokeStyle = "#AAAAAA";
-                            } else {
-                                ctx.fillStyle = this.color;
-                                ctx.strokeStyle = this.color;
-                            }
-                            if (y_position) {
-                                ctx.beginPath();
-                                ctx.arc(this.x, this.y, this.size, 0, 2 * Math.PI, false);
-                            } else {
-                                this.movePoints();
-                                ctx.beginPath();
-                                var i = this.getNumPoints();
-                                ctx.moveTo(this.points[0].x, this.points[0].y);
-                                /** @type {number} */
-                                c = 1;
-                                for (;c <= i;++c) {
-                                    /** @type {number} */
-                                    var el = c % i;
-                                    ctx.lineTo(this.points[el].x, this.points[el].y);
-                                }
-                            }
-                            ctx.closePath();
-                            i = this.name.toLowerCase();
-                            if (!this.isAgitated && (text && "" == dest)) {
-                                if (-1 != numbers.indexOf(i)) {
-                                    if (!imgs.hasOwnProperty(i)) {
-                                        /** @type {Image} */
-                                        imgs[i] = new Image;
-                                        /** @type {string} */
-                                        imgs[i].src = "skins/" + i + ".png";
-                                    }
-                                    c = 0 != imgs[i].width && imgs[i].complete ? imgs[i] : null;
-                                } else {
-                                    /** @type {null} */
-                                    c = null;
-                                }
-                            } else {
-                                /** @type {null} */
-                                c = null;
-                            }
-                            /** @type {boolean} */
-                            c = (el = c) ? -1 != whitespace.indexOf(i) : false;
-                            if (!y_position) {
-                                ctx.stroke();
-                            }
-                            ctx.fill();
-                            if (!(null == el)) {
-                                if (!c) {
-                                    ctx.save();
-                                    ctx.clip();
-                                    ctx.drawImage(el, this.x - this.size, this.y - this.size, 2 * this.size, 2 * this.size);
-                                    ctx.restore();
-                                }
-                            }
-                            if (doneResults || 15 < this.size) {
-                                if (!y_position) {
-                                    /** @type {string} */
-                                    ctx.strokeStyle = "#000000";
-                                    ctx.globalAlpha *= 0.1;
-                                    ctx.stroke();
-                                }
-                            }
-                            /** @type {number} */
-                            ctx.globalAlpha = 1;
-                            if (null != el) {
-                                if (c) {
-                                    ctx.drawImage(el, this.x - 2 * this.size, this.y - 2 * this.size, 4 * this.size, 4 * this.size);
-                                }
-                            }
-                            /** @type {boolean} */
-                            c = -1 != data.indexOf(this);
-                            /** @type {number} */
-                            y_position = ~~this.y;
-                            if (($timeout || c) && (this.name && (this.nameCache && (null == el || -1 == reserved.indexOf(i))))) {
-                                el = this.nameCache;
-                                el.setValue(this.name);
-                                el.setSize(this.getNameSize());
-                                /** @type {number} */
-                                i = Math.ceil(10 * ratio) / 10;
-                                el.setScale(i);
-                                el = el.render();
-                                /** @type {number} */
-                                var glockBottomWidth = ~~(el.width / i);
-                                /** @type {number} */
-                                var sh = ~~(el.height / i);
-                                ctx.drawImage(el, ~~this.x - ~~(glockBottomWidth / 2), y_position - ~~(sh / 2), glockBottomWidth, sh);
-                                y_position += el.height / 2 / i + 4;
-                            }
-                            if (result) {
-                                if (c || 0 == data.length && ((!this.isVirus || this.isAgitated) && 20 < this.size)) {
-                                    if (null == this.sizeCache) {
-                                        this.sizeCache = new SVGPlotFunction(this.getNameSize() / 2, "#FFFFFF", true, "#000000");
-                                    }
-                                    c = this.sizeCache;
-                                    c.setSize(this.getNameSize() / 2);
-                                    c.setValue(~~(this.size * this.size / 100));
-                                    /** @type {number} */
-                                    i = Math.ceil(10 * ratio) / 10;
-                                    c.setScale(i);
-                                    el = c.render();
-                                    /** @type {number} */
-                                    glockBottomWidth = ~~(el.width / i);
-                                    /** @type {number} */
-                                    sh = ~~(el.height / i);
-                                    ctx.drawImage(el, ~~this.x - ~~(glockBottomWidth / 2), y_position - ~~(sh / 2), glockBottomWidth, sh);
-                                }
-                            }
-                            ctx.restore();
-                        }
-                    }
-                };
-                SVGPlotFunction.prototype = {
-                    _value : "",
-                    _color : "#000000",
-                    _stroke : false,
-                    _strokeColor : "#000000",
-                    _size : 16,
-                    _canvas : null,
-                    _ctx : null,
-                    _dirty : false,
-                    _scale : 1,
-                    /**
-                     * @param {number} size
-                     * @return {undefined}
-                     */
-                    setSize : function(size) {
-                        if (this._size != size) {
-                            /** @type {number} */
-                            this._size = size;
-                            /** @type {boolean} */
-                            this._dirty = true;
-                        }
-                    },
-                    /**
-                     * @param {?} s
-                     * @return {undefined}
-                     */
-                    setScale : function(s) {
-                        if (this._scale != s) {
-                            this._scale = s;
-                            /** @type {boolean} */
-                            this._dirty = true;
-                        }
-                    },
-                    /**
-                     * @param {string} color
-                     * @return {undefined}
-                     */
-                    setColor : function(color) {
-                        if (this._color != color) {
-                            /** @type {string} */
-                            this._color = color;
-                            /** @type {boolean} */
-                            this._dirty = true;
-                        }
-                    },
-                    /**
-                     * @param {boolean} stroke
-                     * @return {undefined}
-                     */
-                    setStroke : function(stroke) {
-                        if (this._stroke != stroke) {
-                            /** @type {boolean} */
-                            this._stroke = stroke;
-                            /** @type {boolean} */
-                            this._dirty = true;
-                        }
-                    },
-                    /**
-                     * @param {string} b
-                     * @return {undefined}
-                     */
-                    setStrokeColor : function(b) {
-                        if (this._strokeColor != b) {
-                            /** @type {string} */
-                            this._strokeColor = b;
-                            /** @type {boolean} */
-                            this._dirty = true;
-                        }
-                    },
-                    /**
-                     * @param {number} value
-                     * @return {undefined}
-                     */
-                    setValue : function(value) {
-                        if (value != this._value) {
-                            /** @type {number} */
-                            this._value = value;
-                            /** @type {boolean} */
-                            this._dirty = true;
-                        }
-                    },
-                    /**
-                     * @return {?}
-                     */
-                    render : function() {
-                        if (null == this._canvas) {
-                            /** @type {Element} */
-                            this._canvas = document.createElement("canvas");
-                            this._ctx = this._canvas.getContext("2d");
-                        }
-                        if (this._dirty) {
-                            /** @type {boolean} */
-                            this._dirty = false;
-                            var canvas = this._canvas;
-                            var ctx = this._ctx;
-                            var caracter = this._value;
-                            var scale = this._scale;
-                            var size = this._size;
-                            /** @type {string} */
-                            var text = size + "px Ubuntu";
-                            /** @type {string} */
-                            ctx.font = text;
-                            var w = ctx.measureText(caracter).width;
-                            /** @type {number} */
-                            var x = ~~(0.2 * size);
-                            /** @type {number} */
-                            canvas.width = (w + 6) * scale;
-                            /** @type {number} */
-                            canvas.height = (size + x) * scale;
-                            /** @type {string} */
-                            ctx.font = text;
-                            ctx.scale(scale, scale);
-                            /** @type {number} */
-                            ctx.globalAlpha = 1;
-                            /** @type {number} */
-                            ctx.lineWidth = 3;
-                            ctx.strokeStyle = this._strokeColor;
-                            ctx.fillStyle = this._color;
-                            if (this._stroke) {
-                                ctx.strokeText(caracter, 3, size - x / 2);
-                            }
-                            ctx.fillText(caracter, 3, size - x / 2);
-                        }
-                        return this._canvas;
-                    }
-                };
-                /** @type {function (): undefined} */
-                self.onload = init;
-            }
-        }
-    }
+(function(self, g) {
+	function Pa() {
+		ja = !0;
+		xa();
+		setInterval(xa, 18E4);
+		canvas = ka = document.getElementById("canvas-2");
+		e = canvas.getContext("2d");
+		canvas.onmousedown = function(a) {
+			if (ya) {
+				var b = a.clientX - (5 + p / 5 / 2),
+					c = a.clientY - (5 + p / 5 / 2);
+				if (Math.sqrt(b * b + c * c) <= p / 5 / 2) {
+					emit();
+					registerEvent(17);
+					return
+				}
+			}
+			S = a.clientX;
+			T = a.clientY;
+			triggerObjectAt();
+			emit()
+		};
+		canvas.onmousemove = function(a) {
+			S = a.clientX;
+			T = a.clientY;
+			triggerObjectAt()
+		};
+		canvas.onmouseup = function(a) {};
+		/firefox/i.test(navigator.userAgent) ? document.addEventListener("DOMMouseScroll", za, !1) : document.body.onmousewheel = za;
+		var a = !1,
+			b = !1,
+			c = !1;
+		self.onkeydown = function(d) {
+			32 != d.keyCode || a || (emit(), registerEvent(17), a = !0);
+			81 != d.keyCode || b || (registerEvent(18), b = !0);
+			87 != d.keyCode || c || (emit(), registerEvent(21), c = !0);
+			27 == d.keyCode && Aa(!0)
+		};
+		self.onkeyup = function(d) {
+			32 == d.keyCode && (a = !1);
+			87 == d.keyCode && (c = !1);
+			81 == d.keyCode && b && (registerEvent(19), b = !1)
+		};
+		self.onblur = function() {
+			registerEvent(19);
+			c = b = a = !1
+		};
+		self.onresize = onResize;
+		onResize();
+		self.requestAnimationFrame ? self.requestAnimationFrame(anim) : setInterval(draw, 1E3 / 60);
+		setInterval(function() {
+			if (!window.botEnabled) {
+				emit();
+			}
+		}, 40);
+		u && g("#region").val(u);
+		Da();
+		U(g("#region").val());
+		null == m && u && V();
+		g("#overlays").show()
+	}
 
-    var ai=window.ai=new Ai(
-        function(x1,y2){value=x1;x=y2;if(window.botEnabled) {emit()}},
-        function(){registerEvent(17)},
-        function(){registerEvent(21)})
-    var onUpdate=run
-    run=function(a){
-        onUpdate(a)
-        ai.tick(arr,data,closingAnimationTime) //blobs,myblobs,score
-    }
+	function za(a) {
+		C *= Math.pow(.9, a.wheelDelta / -120 || a.detail || 0);
+		1 > C && (C = 1);
+		C > 4 / h && (C = 4 / h)
+	}
 
-    var onDeath=post
-    post=function(a){
-        onDeath(a)
-        window.setTimeout(function(){window.setNick(window.skinNames[~~(window.skinNames.length*Math.pow(Math.random(),2))])},5000)
-    }
+	function Qa() {
+		if (.35 > h) L = null;
+		else {
+			for (var a = Number.POSITIVE_INFINITY, b = Number.POSITIVE_INFINITY, c = Number.NEGATIVE_INFINITY, d = Number.NEGATIVE_INFINITY, e = 0, q = 0; q < n.length; q++) n[q].shouldRender() && (e = Math.max(n[q].size, e), a = Math.min(n[q].x, a), b = Math.min(n[q].y, b), c = Math.max(n[q].x, c), d = Math.max(n[q].y, d));
+			L = QUAD.init({
+				minX: a - (e + 100),
+				minY: b - (e + 100),
+				maxX: c + (e + 100),
+				maxY: d + (e + 100)
+			});
+			for (q = 0; q < n.length; q++)
+				if (a = n[q], a.shouldRender())
+					for (b = 0; b < a.points.length; ++b) L.insert(a.points[b])
+		}
+	}
+
+	function triggerObjectAt() {
+		W = (S - p / 2) / h + s;
+		X = (T - r / 2) / h + t
+	}
+
+	function xa() {
+		null == Y && (Y = {}, g("#region").children().each(function() {
+			var a = g(this),
+				b = a.val();
+			b && (Y[b] = a.text())
+		}));
+		g.get(F + "//m.agar.io/info", function(a) {
+			var b = {},
+				c;
+			for (c in a.regions) {
+				var d = c.split(":")[0];
+				b[d] = b[d] || 0;
+				b[d] += a.regions[c].numPlayers
+			}
+			for (c in b) g('#region option[value="' + c + '"]').text(Y[c] + " (" + b[c] + " players)")
+		}, "json")
+	}
+
+	function Ea() {
+		g("#adsBottom").hide();
+		g("#overlays").hide();
+		Da()
+	}
+
+	function U(a) {
+		a && a != u && (g("#region").val() != a && g("#region").val(a),
+			u = self.localStorage.location = a, g(".region-message").hide(), g(".region-message." + a).show(), g(".btn-needs-server").prop("disabled", !1), ja && V())
+	}
+
+	function Aa(a) {
+		D = null;
+		g("#overlays").fadeIn(a ? 200 : 3E3);
+		a || g("#adsBottom").fadeIn(3E3)
+	}
+
+	function Da() {
+		g("#region").val() ? self.localStorage.location = g("#region").val() : self.localStorage.location && g("#region").val(self.localStorage.location);
+		g("#region").val() ? g("#locationKnown").append(g("#region")) : g("#locationUnknown").append(g("#region"))
+	}
+
+	function na() {
+		console.log("Find " +
+			u + M);
+		g.ajax(F + "//m.agar.io/", {
+			error: function() {
+				setTimeout(na, 1E3)
+			},
+			success: function(a) {
+				a = a.split("\n");
+				g('#ip-address').html(a[0])
+				"45.79.222.79:443" == a[0] ? na() : Fa("ws://" + a[0])
+			},
+			dataType: "text",
+			method: "POST",
+			cache: !1,
+			crossDomain: !0,
+			data: u + M || "?"
+		})
+	}
+
+	function V() {
+		ja && u && (g("#connecting").show(), na())
+	}
+
+	function Fa(a) {
+		if (m) {
+			m.onopen = null;
+			m.onmessage = null;
+			m.onclose = null;
+			try {
+				m.close()
+			} catch (b) {}
+			m = null
+		}
+		var c = self.location.search.slice(1);
+		/^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+$/.test(c) && (a = "ws://" + c);
+		Ga && (a = a.split(":"), a = a[0] + "s://ip-" +
+			a[1].replace(/\./g, "-").replace(/\//g, "") + ".tech.agar.io:" + (+a[2] + 2E3));
+		E = [];
+		l = [];
+		y = {};
+		n = [];
+		G = [];
+		z = [];
+		v = w = null;
+		H = 0;
+		console.log("Connecting to " + a);
+		m = new WebSocket(a, Ga ? ["binary", "base64"] : []);
+		m.binaryType = "arraybuffer";
+		m.onopen = Ra;
+		m.onmessage = Sa;
+		m.onclose = Ta;
+		m.onerror = function() {
+			console.log("socket error")
+		}
+	}
+
+	function Ra(a) {
+		Z = 500;
+		g("#connecting").hide();
+		console.log("socket open");
+		a = new ArrayBuffer(5);
+		var b = new DataView(a);
+		b.setUint8(0, 254);
+		b.setUint32(1, 4, !0);
+		m.send(a);
+		a = new ArrayBuffer(5);
+		b = new DataView(a);
+		b.setUint8(0, 255);
+		b.setUint32(1, 673720360, !0);
+		m.send(a);
+		Ha()
+	}
+
+	function Ta(a) {
+		console.log("socket close");
+		setTimeout(V, Z);
+		Z *= 1.5
+	}
+
+	function Sa(a) {
+		function b() {
+			for (var a = "";;) {
+				var b = d.getUint16(c, !0);
+				c += 2;
+				if (0 == b) break;
+				a += String.fromCharCode(b)
+			}
+			return a
+		}
+		var c = 0,
+			d = new DataView(a.data);
+		240 == d.getUint8(c) && (c += 5);
+		switch (d.getUint8(c++)) {
+			case 16:
+				Ua(d, c);
+				break;
+			case 17:
+				N = d.getFloat32(c, !0);
+				c += 4;
+				O = d.getFloat32(c, !0);
+				c += 4;
+				P = d.getFloat32(c, !0);
+				c += 4;
+				break;
+			case 20:
+				l = [];
+				E = [];
+				break;
+			case 21:
+				oa = d.getInt16(c, !0);
+				c += 2;
+				pa = d.getInt16(c, !0);
+				c += 2;
+				qa || (qa = !0, $ = oa, aa = pa);
+				break;
+			case 32:
+				E.push(d.getUint32(c, !0));
+				c += 4;
+				break;
+			case 49:
+				if (null != w) break;
+				a = d.getUint32(c, !0);
+				c += 4;
+				z = [];
+				for (var e = 0; e < a; ++e) {
+					var q = d.getUint32(c, !0),
+						c = c + 4;
+					z.push({
+						id: q,
+						name: b()
+					})
+				}
+				leaderBoard();
+				break;
+			case 50:
+				w = [];
+				a = d.getUint32(c, !0);
+				c += 4;
+				for (e = 0; e < a; ++e) w.push(d.getFloat32(c, !0)), c += 4;
+				leaderBoard();
+				break;
+			case 64:
+				ba = d.getFloat64(c, !0), c += 8, ca = d.getFloat64(c, !0), c += 8, da = d.getFloat64(c, !0), c += 8, ea = d.getFloat64(c, !0), c += 8, N = (da + ba) / 2, O = (ea + ca) / 2, P = 1, 0 == l.length && (s = N, t =
+					O, h = P)
+		}
+	}
+
+	function Ua(a, b) {
+		I = +new Date;
+		var c = Math.random();
+		ra = !1;
+		var d = a.getUint16(b, !0);
+		b += 2;
+		for (var e = 0; e < d; ++e) {
+			var q = y[a.getUint32(b, !0)],
+				f = y[a.getUint32(b + 4, !0)];
+			b += 8;
+			q && f && (f.destroy(), f.ox = f.x, f.oy = f.y, f.oSize = f.size, f.nx = q.x, f.ny = q.y, f.nSize = f.size, f.updateTime = I)
+		}
+		for (e = 0;;) {
+			d = a.getUint32(b, !0);
+			b += 4;
+			if (0 == d) break;
+			++e;
+			var g, q = a.getInt16(b, !0);
+			b += 2;
+			f = a.getInt16(b, !0);
+			b += 2;
+			g = a.getInt16(b, !0);
+			b += 2;
+			for (var h = a.getUint8(b++), m = a.getUint8(b++), p = a.getUint8(b++), h = (h << 16 | m << 8 | p).toString(16); 6 > h.length;) h = "0" + h;
+			var h = "#" + h,
+				k = a.getUint8(b++),
+				m = !!(k & 1),
+				p = !!(k & 16);
+			k & 2 && (b += 4);
+			k & 4 && (b += 8);
+			k & 8 && (b += 16);
+			for (var n, k = "";;) {
+				n = a.getUint16(b, !0);
+				b += 2;
+				if (0 == n) break;
+				k += String.fromCharCode(n)
+			}
+			n = k;
+			k = null;
+			y.hasOwnProperty(d) ? (k = y[d], k.updatePos(), k.ox = k.x, k.oy = k.y, k.oSize = k.size, k.color = h) : (k = new Ja(d, q, f, g, h, n), k.pX = q, k.pY = f);
+			k.isVirus = m;
+			k.isAgitated = p;
+			k.nx = q;
+			k.ny = f;
+			k.nSize = g;
+			k.updateCode = c;
+			k.updateTime = I;
+			n && k.setName(n); - 1 != E.indexOf(d) && -1 == l.indexOf(k) && (document.getElementById("overlays").style.display = "none", l.push(k), 1 == l.length && (s = k.x, t = k.y))
+		}
+		c = a.getUint32(b, !0);
+		b += 4;
+		for (e = 0; e < c; e++) d = a.getUint32(b, !0), b += 4, k = y[d], null != k && k.destroy();
+		ra && 0 == l.length && Aa(!1)
+	}
+
+	function emit() {
+		if (sa()) {
+			var a = S - p / 2,
+				b = T - r / 2;
+			64 > a * a + b * b || Ka == W && La == X || (Ka = W, La = X, a = new ArrayBuffer(21), b = new DataView(a), b.setUint8(0, 16), b.setFloat64(1, W, !0), b.setFloat64(9, X, !0), b.setUint32(17, 0, !0), m.send(a))
+		}
+	}
+
+	function Ha() {
+		if (sa() && null != D) {
+			var a = new ArrayBuffer(1 + 2 * D.length),
+				b = new DataView(a);
+			b.setUint8(0, 0);
+			for (var c = 0; c < D.length; ++c) b.setUint16(1 +
+				2 * c, D.charCodeAt(c), !0);
+			m.send(a)
+		}
+	}
+
+	function sa() {
+		return null != m && m.readyState == m.OPEN
+	}
+
+	function registerEvent(a) {
+		if (sa()) {
+			var b = new ArrayBuffer(1);
+			(new DataView(b)).setUint8(0, a);
+			m.send(b)
+		}
+	}
+
+	function anim() {
+		draw();
+		self.requestAnimationFrame(anim)
+	}
+
+	function onResize() {
+		p = self.innerWidth;
+		r = self.innerHeight;
+		ka.width = canvas.width = p;
+		ka.height = canvas.height = r;
+		draw()
+	}
+
+	function Ma() {
+		var a;
+		a = 1 * Math.max(r / 1080, p / 1920);
+		return a *= C
+	}
+
+	function Va() {
+		if (0 != l.length) {
+			for (var a = 0, b = 0; b < l.length; b++) a += l[b].size;
+			a = Math.pow(Math.min(64 / a, 1), .4) * Ma();
+			h = (9 * h + a) / 10
+		}
+	}
+
+	function draw() {
+		var a,
+			b, c = +new Date;
+		++Wa;
+		I = +new Date;
+		if (0 < l.length) {
+			Va();
+			for (var d = a = b = 0; d < l.length; d++) l[d].updatePos(), b += l[d].x / l.length, a += l[d].y / l.length;
+			N = b;
+			O = a;
+			P = h;
+			s = (s + b) / 2;
+			t = (t + a) / 2
+		} else s = (29 * s + N) / 30, t = (29 * t + O) / 30, h = (9 * h + P * Ma()) / 10;
+		Qa();
+		triggerObjectAt();
+		ta || e.clearRect(0, 0, p, r);
+		if (ta) e.fillStyle = fa ? "#222222" : "#F2FBFF", e.globalAlpha = .05, e.fillRect(0, 0, p, r), e.globalAlpha = 1;
+		else {
+			e.fillStyle = fa ? "#222222" : "#F2FBFF";
+			e.fillRect(0, 0, p, r);
+			e.save();
+			e.strokeStyle = fa ? "#AAAAAA" : "#000000";
+			e.globalAlpha = .2;
+			e.scale(h, h);
+			b = p / h;
+			a = r / h;
+			//for (d = -.5 + (-s + b / 2) % 50; d < b; d += 50) e.beginPath(), e.moveTo(d, 0), e.lineTo(d, a), e.stroke();
+			//for (d = -.5 + (-t + a / 2) % 50; d < a; d += 50) e.beginPath(), e.moveTo(0, d), e.lineTo(b, d), e.stroke();
+			e.restore()
+		}
+		n.sort(function(a, b) {
+			return a.size == b.size ? a.id - b.id : a.size - b.size
+		});
+		e.save();
+		e.translate(p / 2, r / 2);
+		e.scale(h, h);
+		e.translate(-s, -t);
+		for (d = 0; d < G.length; d++) G[d].draw();
+		for (d = 0; d < n.length; d++) n[d].draw();
+		ai.draw(e)
+		if (qa) {
+			$ = (3 * $ + oa) / 4;
+			aa = (3 * aa + pa) / 4;
+			e.save();
+			e.strokeStyle = "#FFAAAA";
+			e.lineWidth = 10;
+			e.lineCap = "round";
+			e.lineJoin = "round";
+			e.globalAlpha =
+				.5;
+			e.beginPath();
+			for (d = 0; d < l.length; d++) e.moveTo(l[d].x, l[d].y), e.lineTo($, aa);
+			e.stroke();
+			e.restore()
+		}
+		e.restore();
+		v && v.width && e.drawImage(v, p - v.width - 10, 10);
+		H = Math.max(H, Xa());
+		//0 != H && (null == ga && (ga = new ha(24, "#FFFFFF")), ga.setValue("Score: " + ~~(H / 100)), a = ga.render(), b = a.width, e.globalAlpha = .2, e.fillStyle = "#000000", e.globalAlpha = 1, e.drawImage(a, 15, r - 10 - 24 - 5));
+		Ya();
+		c = +new Date - c;
+		c > 1E3 / 60 ? x -= .01 : c < 1E3 / 65 && (x += .01);.4 > x && (x = .4);
+		1 < x && (x = 1)
+	}
+
+	function Ya() {
+		if (ya && ua.width) {
+			var a = p / 5;
+			e.drawImage(ua, 5, 5, a, a)
+		}
+	}
+
+	function Xa() {
+		for (var a = 0, b = 0; b < l.length; b++) a += l[b].nSize * l[b].nSize;
+		return a
+	}
+
+	function leaderBoard() {
+		v = null;
+		if (null != w || 0 != z.length)
+			if (null != w || ia) {
+				v = document.createElement("canvas");
+				var a = v.getContext("2d"),
+					b = 60,
+					b = null == w ? b + 24 * z.length : b + 180,
+					c = Math.min(200, .3 * p) / 200;
+				v.width = 200 * c;
+				v.height = b * c;
+				a.scale(c, c);
+				a.globalAlpha = .4;
+				a.fillStyle = "#000000";
+				//a.fillRect(0, 0, 200, b);
+				a.globalAlpha = 1;
+				a.fillStyle = "#FFFFFF";
+				c = null;
+				c = "Leaderboard";
+				a.font = "20px Ubuntu";
+				a.fillText(c, 100 - a.measureText(c).width /
+					2, 40);
+				if (null == w)
+					for (a.font = "15px Ubuntu", b = 0; b < z.length; ++b) c = z[b].name || "An unnamed cell", ia || (c = "An unnamed cell"), -1 != E.indexOf(z[b].id) ? (l[0].name && (c = l[0].name), a.fillStyle = "#FFAAAA") : a.fillStyle = "#FFFFFF", c = b + 1 + ". " + c, a.fillText(c, 100 - a.measureText(c).width / 2, 70 + 20 * b);
+				else
+					for (b = c = 0; b < w.length; ++b) angEnd = c + w[b] * Math.PI * 2, a.fillStyle = Za[b + 1], a.beginPath(), a.moveTo(100, 140), a.arc(100, 140, 80, c, angEnd, !1), a.fill(), c = angEnd
+			}
+	}
+
+	function Ja(a, b, c, d, e, f) {
+		n.push(this);
+		y[a] = this;
+		this.id = a;
+		this.ox = this.x = b;
+		this.oy = this.y = c;
+		this.oSize = this.size = d;
+		this.color = e;
+		this.points = [];
+		this.pointsAcc = [];
+		this.createPoints();
+		this.setName(f)
+	}
+
+	function ha(a, b, c, d) {
+		a && (this._size = a);
+		b && (this._color = b);
+		this._stroke = !!c;
+		d && (this._strokeColor = d)
+	}
+	var F = self.location.protocol,
+		Ga = "https:" == F;
+	if ("agar.io" != self.location.hostname && "localhost" != self.location.hostname && "10.10.2.13" != self.location.hostname) self.location = F + "//agar.io/";
+	else if (self.top != self) self.top.location = F + "//agar.io/";
+	else {
+		var ka, e, canvas, p, r, L = null,
+			m = null,
+			s = 0,
+			t = 0,
+			E = [],
+			l = [],
+			y = {},
+			n = [],
+			G = [],
+			z = [],
+			S = 0,
+			T = 0,
+			W = -1,
+			X = -1,
+			Wa = 0,
+			I = 0,
+			D = null,
+			ba = 0,
+			ca = 0,
+			da = 1E4,
+			ea = 1E4,
+			h = 1,
+			u = null,
+			Na = !0,
+			ia = !0,
+			va = !1,
+			ra = !1,
+			H = 0,
+			fa = !1,
+			Oa = !1,
+			N = s = ~~((ba + da) / 2),
+			O = t = ~~((ca + ea) / 2),
+			P = 1,
+			M = "",
+			w = null,
+			ja = !1,
+			qa = !1,
+			oa = 0,
+			pa = 0,
+			$ = 0,
+			aa = 0,
+			Q = 0,
+			Za = ["#333333", "#FF3333", "#33FF33", "#3333FF"],
+			ta = !1,
+			C = 1,
+			ya = "ontouchstart" in self && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
+			ua = new Image;
+		ua.src = "img/split.png";
+		Q = document.createElement("canvas");
+		if ("undefined" == typeof console || "undefined" == typeof DataView ||
+			"undefined" == typeof WebSocket || null == Q || null == Q.getContext || null == self.localStorage) alert("You browser does not support this game, we recommend you to use Firefox to play this");
+		else {
+			var Y = null;
+			self.setNick = function(a) {
+				Ea();
+				D = a;
+				Ha();
+				H = 0
+			};
+			self.setRegion = U;
+			self.setSkins = function(a) {
+				Na = a
+			};
+			self.setNames = function(a) {
+				ia = a
+			};
+			self.setDarkTheme = function(a) {
+				fa = a
+			};
+			self.setColors = function(a) {
+				va = a
+			};
+			self.setShowMass = function(a) {
+				Oa = a
+			};
+			self.spectate = function() {
+				D = null;
+				registerEvent(1);
+				Ea()
+			};
+			self.setGameMode = function(a) {
+				a != M && (M = a, V())
+			};
+			self.setAcid = function(a) {
+				ta = a
+			};
+			null != self.localStorage && (null == self.localStorage.AB8 && (self.localStorage.AB8 = 0 + ~~(100 * Math.random())), Q = +self.localStorage.AB8, self.ABGroup = Q);
+			g.get(F + "//gc.agar.io", function(a) {
+				var b = a.split(" ");
+				a = b[0];
+				b = b[1] || ""; - 1 == "DE IL PL HU BR AT UA".split(" ").indexOf(a) && wa.push("nazi"); - 1 == ["UA"].indexOf(a) && wa.push("ussr");
+				R.hasOwnProperty(a) && ("string" == typeof R[a] ? u || U(R[a]) : R[a].hasOwnProperty(b) && (u || U(R[a][b])))
+			}, "text");
+			setTimeout(function() {}, 3E5);
+			var R = {
+				AF: "JP-Tokyo",
+				AX: "EU-London",
+				AL: "EU-London",
+				DZ: "EU-London",
+				AS: "SG-Singapore",
+				AD: "EU-London",
+				AO: "EU-London",
+				AI: "US-Atlanta",
+				AG: "US-Atlanta",
+				AR: "BR-Brazil",
+				AM: "JP-Tokyo",
+				AW: "US-Atlanta",
+				AU: "SG-Singapore",
+				AT: "EU-London",
+				AZ: "JP-Tokyo",
+				BS: "US-Atlanta",
+				BH: "JP-Tokyo",
+				BD: "JP-Tokyo",
+				BB: "US-Atlanta",
+				BY: "EU-London",
+				BE: "EU-London",
+				BZ: "US-Atlanta",
+				BJ: "EU-London",
+				BM: "US-Atlanta",
+				BT: "JP-Tokyo",
+				BO: "BR-Brazil",
+				BQ: "US-Atlanta",
+				BA: "EU-London",
+				BW: "EU-London",
+				BR: "BR-Brazil",
+				IO: "JP-Tokyo",
+				VG: "US-Atlanta",
+				BN: "JP-Tokyo",
+				BG: "EU-London",
+				BF: "EU-London",
+				BI: "EU-London",
+				KH: "JP-Tokyo",
+				CM: "EU-London",
+				CA: "US-Atlanta",
+				CV: "EU-London",
+				KY: "US-Atlanta",
+				CF: "EU-London",
+				TD: "EU-London",
+				CL: "BR-Brazil",
+				CN: "CN-China",
+				CX: "JP-Tokyo",
+				CC: "JP-Tokyo",
+				CO: "BR-Brazil",
+				KM: "EU-London",
+				CD: "EU-London",
+				CG: "EU-London",
+				CK: "SG-Singapore",
+				CR: "US-Atlanta",
+				CI: "EU-London",
+				HR: "EU-London",
+				CU: "US-Atlanta",
+				CW: "US-Atlanta",
+				CY: "JP-Tokyo",
+				CZ: "EU-London",
+				DK: "EU-London",
+				DJ: "EU-London",
+				DM: "US-Atlanta",
+				DO: "US-Atlanta",
+				EC: "BR-Brazil",
+				EG: "EU-London",
+				SV: "US-Atlanta",
+				GQ: "EU-London",
+				ER: "EU-London",
+				EE: "EU-London",
+				ET: "EU-London",
+				FO: "EU-London",
+				FK: "BR-Brazil",
+				FJ: "SG-Singapore",
+				FI: "EU-London",
+				FR: "EU-London",
+				GF: "BR-Brazil",
+				PF: "SG-Singapore",
+				GA: "EU-London",
+				GM: "EU-London",
+				GE: "JP-Tokyo",
+				DE: "EU-London",
+				GH: "EU-London",
+				GI: "EU-London",
+				GR: "EU-London",
+				GL: "US-Atlanta",
+				GD: "US-Atlanta",
+				GP: "US-Atlanta",
+				GU: "SG-Singapore",
+				GT: "US-Atlanta",
+				GG: "EU-London",
+				GN: "EU-London",
+				GW: "EU-London",
+				GY: "BR-Brazil",
+				HT: "US-Atlanta",
+				VA: "EU-London",
+				HN: "US-Atlanta",
+				HK: "JP-Tokyo",
+				HU: "EU-London",
+				IS: "EU-London",
+				IN: "JP-Tokyo",
+				ID: "JP-Tokyo",
+				IR: "JP-Tokyo",
+				IQ: "JP-Tokyo",
+				IE: "EU-London",
+				IM: "EU-London",
+				IL: "JP-Tokyo",
+				IT: "EU-London",
+				JM: "US-Atlanta",
+				JP: "JP-Tokyo",
+				JE: "EU-London",
+				JO: "JP-Tokyo",
+				KZ: "JP-Tokyo",
+				KE: "EU-London",
+				KI: "SG-Singapore",
+				KP: "JP-Tokyo",
+				KR: "JP-Tokyo",
+				KW: "JP-Tokyo",
+				KG: "JP-Tokyo",
+				LA: "JP-Tokyo",
+				LV: "EU-London",
+				LB: "JP-Tokyo",
+				LS: "EU-London",
+				LR: "EU-London",
+				LY: "EU-London",
+				LI: "EU-London",
+				LT: "EU-London",
+				LU: "EU-London",
+				MO: "JP-Tokyo",
+				MK: "EU-London",
+				MG: "EU-London",
+				MW: "EU-London",
+				MY: "JP-Tokyo",
+				MV: "JP-Tokyo",
+				ML: "EU-London",
+				MT: "EU-London",
+				MH: "SG-Singapore",
+				MQ: "US-Atlanta",
+				MR: "EU-London",
+				MU: "EU-London",
+				YT: "EU-London",
+				MX: "US-Atlanta",
+				FM: "SG-Singapore",
+				MD: "EU-London",
+				MC: "EU-London",
+				MN: "JP-Tokyo",
+				ME: "EU-London",
+				MS: "US-Atlanta",
+				MA: "EU-London",
+				MZ: "EU-London",
+				MM: "JP-Tokyo",
+				NA: "EU-London",
+				NR: "SG-Singapore",
+				NP: "JP-Tokyo",
+				NL: "EU-London",
+				NC: "SG-Singapore",
+				NZ: "SG-Singapore",
+				NI: "US-Atlanta",
+				NE: "EU-London",
+				NG: "EU-London",
+				NU: "SG-Singapore",
+				NF: "SG-Singapore",
+				MP: "SG-Singapore",
+				NO: "EU-London",
+				OM: "JP-Tokyo",
+				PK: "JP-Tokyo",
+				PW: "SG-Singapore",
+				PS: "JP-Tokyo",
+				PA: "US-Atlanta",
+				PG: "SG-Singapore",
+				PY: "BR-Brazil",
+				PE: "BR-Brazil",
+				PH: "JP-Tokyo",
+				PN: "SG-Singapore",
+				PL: "EU-London",
+				PT: "EU-London",
+				PR: "US-Atlanta",
+				QA: "JP-Tokyo",
+				RE: "EU-London",
+				RO: "EU-London",
+				RU: "RU-Russia",
+				RW: "EU-London",
+				BL: "US-Atlanta",
+				SH: "EU-London",
+				KN: "US-Atlanta",
+				LC: "US-Atlanta",
+				MF: "US-Atlanta",
+				PM: "US-Atlanta",
+				VC: "US-Atlanta",
+				WS: "SG-Singapore",
+				SM: "EU-London",
+				ST: "EU-London",
+				SA: "EU-London",
+				SN: "EU-London",
+				RS: "EU-London",
+				SC: "EU-London",
+				SL: "EU-London",
+				SG: "JP-Tokyo",
+				SX: "US-Atlanta",
+				SK: "EU-London",
+				SI: "EU-London",
+				SB: "SG-Singapore",
+				SO: "EU-London",
+				ZA: "EU-London",
+				SS: "EU-London",
+				ES: "EU-London",
+				LK: "JP-Tokyo",
+				SD: "EU-London",
+				SR: "BR-Brazil",
+				SJ: "EU-London",
+				SZ: "EU-London",
+				SE: "EU-London",
+				CH: "EU-London",
+				SY: "EU-London",
+				TW: "JP-Tokyo",
+				TJ: "JP-Tokyo",
+				TZ: "EU-London",
+				TH: "JP-Tokyo",
+				TL: "JP-Tokyo",
+				TG: "EU-London",
+				TK: "SG-Singapore",
+				TO: "SG-Singapore",
+				TT: "US-Atlanta",
+				TN: "EU-London",
+				TR: "TK-Turkey",
+				TM: "JP-Tokyo",
+				TC: "US-Atlanta",
+				TV: "SG-Singapore",
+				UG: "EU-London",
+				UA: "EU-London",
+				AE: "EU-London",
+				GB: "EU-London",
+				US: {
+					AL: "US-Atlanta",
+					AK: "US-Fremont",
+					AZ: "US-Fremont",
+					AR: "US-Atlanta",
+					CA: "US-Fremont",
+					CO: "US-Fremont",
+					CT: "US-Atlanta",
+					DE: "US-Atlanta",
+					FL: "US-Atlanta",
+					GA: "US-Atlanta",
+					HI: "US-Fremont",
+					ID: "US-Fremont",
+					IL: "US-Atlanta",
+					IN: "US-Atlanta",
+					IA: "US-Atlanta",
+					KS: "US-Atlanta",
+					KY: "US-Atlanta",
+					LA: "US-Atlanta",
+					ME: "US-Atlanta",
+					MD: "US-Atlanta",
+					MA: "US-Atlanta",
+					MI: "US-Atlanta",
+					MN: "US-Fremont",
+					MS: "US-Atlanta",
+					MO: "US-Atlanta",
+					MT: "US-Fremont",
+					NE: "US-Fremont",
+					NV: "US-Fremont",
+					NH: "US-Atlanta",
+					NJ: "US-Atlanta",
+					NM: "US-Fremont",
+					NY: "US-Atlanta",
+					NC: "US-Atlanta",
+					ND: "US-Fremont",
+					OH: "US-Atlanta",
+					OK: "US-Atlanta",
+					OR: "US-Fremont",
+					PA: "US-Atlanta",
+					RI: "US-Atlanta",
+					SC: "US-Atlanta",
+					SD: "US-Fremont",
+					TN: "US-Atlanta",
+					TX: "US-Atlanta",
+					UT: "US-Fremont",
+					VT: "US-Atlanta",
+					VA: "US-Atlanta",
+					WA: "US-Fremont",
+					WV: "US-Atlanta",
+					WI: "US-Atlanta",
+					WY: "US-Fremont",
+					DC: "US-Atlanta",
+					AS: "US-Atlanta",
+					GU: "US-Atlanta",
+					MP: "US-Atlanta",
+					PR: "US-Atlanta",
+					UM: "US-Atlanta",
+					VI: "US-Atlanta"
+				},
+				UM: "SG-Singapore",
+				VI: "US-Atlanta",
+				UY: "BR-Brazil",
+				UZ: "JP-Tokyo",
+				VU: "SG-Singapore",
+				VE: "BR-Brazil",
+				VN: "JP-Tokyo",
+				WF: "SG-Singapore",
+				EH: "EU-London",
+				YE: "JP-Tokyo",
+				ZM: "EU-London",
+				ZW: "EU-London"
+			};
+			self.connect = Fa;
+			var Z = 500,
+				Ka = -1,
+				La = -1,
+				v = null,
+				x = 1,
+				ga = null,
+				J = {},
+				wa = "poland;usa;china;russia;canada;australia;spain;brazil;germany;ukraine;france;sweden;hitler;north korea;south korea;japan;united kingdom;earth;greece;latvia;lithuania;estonia;finland;norway;cia;maldivas;austria;nigeria;reddit;yaranaika;confederate;9gag;indiana;4chan;italy;bulgaria;tumblr;2ch.hk;hong kong;portugal;jamaica;german empire;mexico;sanik;switzerland;croatia;chile;indonesia;bangladesh;thailand;iran;iraq;peru;moon;botswana;bosnia;netherlands;european union;taiwan;pakistan;hungary;satanist;qing dynasty;matriarchy;patriarchy;feminism;ireland;texas;facepunch;prodota;cambodia;steam;piccolo;ea;india;kc;denmark;quebec;ayy lmao;sealand;bait;tsarist russia;origin;vinesauce;stalin;belgium;luxembourg;stussy;prussia;8ch;argentina;scotland;sir;romania;belarus;wojak;doge;nasa;byzantium;imperial japan;french kingdom;somalia;turkey;mars;pokerface;8;irs;receita federal".split(";"),
+				$a = ["8", "nasa"],
+				ab = ["m'blob"];
+			Ja.prototype = {
+				id: 0,
+				points: null,
+				pointsAcc: null,
+				name: null,
+				nameCache: null,
+				sizeCache: null,
+				x: 0,
+				y: 0,
+				size: 0,
+				ox: 0,
+				oy: 0,
+				oSize: 0,
+				nx: 0,
+				ny: 0,
+				nSize: 0,
+				updateTime: 0,
+				updateCode: 0,
+				drawTime: 0,
+				destroyed: !1,
+				isVirus: !1,
+				isAgitated: !1,
+				wasSimpleDrawing: !0,
+				destroy: function() {
+					var a;
+					for (a = 0; a < n.length; a++)
+						if (n[a] == this) {
+							n.splice(a, 1);
+							break
+						}
+					delete y[this.id];
+					a = l.indexOf(this); - 1 != a && (ra = !0, l.splice(a, 1));
+					a = E.indexOf(this.id); - 1 != a && E.splice(a, 1);
+					this.destroyed = !0;
+					G.push(this)
+				},
+				getNameSize: function() {
+					return Math.max(~~(.3 * this.size), 24)
+				},
+				setName: function(a) {
+					if (this.name = a) null == this.nameCache ? this.nameCache = new ha(this.getNameSize(), "#FFFFFF", !0, "#000000") : this.nameCache.setSize(this.getNameSize()), this.nameCache.setValue(this.name)
+				},
+				createPoints: function() {
+					for (var a = this.getNumPoints(); this.points.length > a;) {
+						var b = ~~(Math.random() * this.points.length);
+						this.points.splice(b, 1);
+						this.pointsAcc.splice(b, 1)
+					}
+					0 == this.points.length && 0 < a && (this.points.push({
+						c: this,
+						v: this.size,
+						x: this.x,
+						y: this.y
+					}), this.pointsAcc.push(Math.random() - .5));
+					for (; this.points.length < a;) {
+						var b = ~~(Math.random() * this.points.length),
+							c = this.points[b];
+						this.points.splice(b, 0, {
+							c: this,
+							v: c.v,
+							x: c.x,
+							y: c.y
+						});
+						this.pointsAcc.splice(b, 0, this.pointsAcc[b])
+					}
+				},
+				getNumPoints: function() {
+					var a = 10;
+					20 > this.size && (a = 5);
+					this.isVirus && (a = 30);
+					var b = this.size;
+					this.isVirus || (b *= h);
+					b *= x;
+					return ~~Math.max(b, a)
+				},
+				movePoints: function() {
+					this.createPoints();
+					for (var a = this.points, b = this.pointsAcc, c = a.length, d = 0; d < c; ++d) {
+						var e = b[(d - 1 + c) % c],
+							f = b[(d + 1) % c];
+						b[d] += (Math.random() - .5) * (this.isAgitated ? 3 : 1);
+						b[d] *= .7;
+						10 < b[d] && (b[d] = 10); - 10 > b[d] && (b[d] = -10);
+						b[d] = (e + f + 8 * b[d]) / 10
+					}
+					for (var h = this, d = 0; d < c; ++d) {
+						var g = a[d].v,
+							e = a[(d - 1 + c) % c].v,
+							f = a[(d + 1) % c].v;
+						if (15 < this.size && null != L) {
+							var l = !1,
+								m = a[d].x,
+								n = a[d].y;
+							L.retrieve2(m - 5, n - 5, 10, 10, function(a) {
+								a.c != h && 25 > (m - a.x) * (m - a.x) + (n - a.y) * (n - a.y) && (l = !0)
+							});
+							!l && (a[d].x < ba || a[d].y < ca || a[d].x > da || a[d].y > ea) && (l = !0);
+							l && (0 < b[d] && (b[d] = 0), b[d] -= 1)
+						}
+						g += b[d];
+						0 > g && (g = 0);
+						g = this.isAgitated ? (19 * g + this.size) / 20 : (12 * g + this.size) / 13;
+						a[d].v = (e + f + 8 * g) / 10;
+						e = 2 * Math.PI / c;
+						f = this.points[d].v;
+						this.isVirus && 0 == d % 2 && (f += 5);
+						a[d].x = this.x + Math.cos(e * d) * f;
+						a[d].y = this.y + Math.sin(e * d) * f
+					}
+				},
+				updatePos: function() {
+					var a;
+					a = (I - this.updateTime) / 120;
+					a = 0 > a ? 0 : 1 < a ? 1 : a;
+					var b = 0 > a ? 0 : 1 < a ? 1 : a;
+					this.getNameSize();
+					if (this.destroyed && 1 <= b) {
+						var c = G.indexOf(this); - 1 != c && G.splice(c, 1)
+					}
+					this.x = a * (this.nx - this.ox) + this.ox;
+					this.y = a * (this.ny - this.oy) + this.oy;
+					this.size = b * (this.nSize - this.oSize) + this.oSize;
+					return b
+				},
+				shouldRender: function() {
+					return this.x + this.size + 40 < s - p / 2 / h || this.y + this.size + 40 < t - r / 2 / h || this.x - this.size - 40 >
+					s + p / 2 / h || this.y - this.size - 40 > t + r / 2 / h ? !1 : !0
+				},
+				draw: function() {
+					if (this.shouldRender()) {
+						var a = !this.isVirus && !this.isAgitated && .35 > h;
+						if (this.wasSimpleDrawing && !a)
+							for (var b = 0; b < this.points.length; b++) this.points[b].v = this.size;
+						this.wasSimpleDrawing = a;
+						e.save();
+						this.drawTime = I;
+						b = this.updatePos();
+						this.destroyed && (e.globalAlpha *= 1 - b);
+						e.lineWidth = 10;
+						e.lineCap = "round";
+						e.lineJoin = this.isVirus ? "mitter" : "round";
+						va ? (e.fillStyle = "#FFFFFF", e.strokeStyle = "#AAAAAA") : (e.fillStyle = this.color, e.strokeStyle = this.color);
+						if (a) e.beginPath(), e.arc(this.x, this.y, this.size, 0, 2 * Math.PI, !1);
+						else {
+							this.movePoints();
+							e.beginPath();
+							var c = this.getNumPoints();
+							e.moveTo(this.points[0].x, this.points[0].y);
+							for (b = 1; b <= c; ++b) {
+								var d = b % c;
+								e.lineTo(this.points[d].x, this.points[d].y)
+							}
+						}
+						e.closePath();
+						c = this.name.toLowerCase();
+						!this.isAgitated && Na && "" == M ? -1 != wa.indexOf(c) ? (J.hasOwnProperty(c) || (J[c] = new Image, J[c].src = "skins/" + c + ".png"), b = 0 != J[c].width && J[c].complete ? J[c] : null) : b = null : b = null;
+						b = (d = b) ? -1 != ab.indexOf(c) : !1;
+						a || e.stroke();
+						e.fill();
+						null == d || b || (e.save(), e.clip(), e.drawImage(d, this.x - this.size, this.y - this.size, 2 * this.size, 2 * this.size), e.restore());
+						(va || 15 < this.size) && !a && (e.strokeStyle = "#000000", e.globalAlpha *= .1, e.stroke());
+						e.globalAlpha = 1;
+						null != d && b && e.drawImage(d, this.x - 2 * this.size, this.y - 2 * this.size, 4 * this.size, 4 * this.size);
+						b = -1 != l.indexOf(this);
+						a = ~~this.y;
+						if ((ia || b) && this.name && this.nameCache && (null == d || -1 == $a.indexOf(c))) {
+							d = this.nameCache;
+							d.setValue(this.name);
+							d.setSize(this.getNameSize());
+							c = Math.ceil(10 * h) / 10;
+							d.setScale(c);
+							var d = d.render(),
+								f = ~~(d.width / c),
+								g = ~~(d.height / c);
+							e.drawImage(d, ~~this.x - ~~(f / 2), a - ~~(g / 2), f, g);
+							a += d.height / 2 / c + 4
+						}
+						Oa && (b || 0 == l.length && (!this.isVirus || this.isAgitated) && 20 < this.size) && (null == this.sizeCache && (this.sizeCache = new ha(this.getNameSize() / 2, "#FFFFFF", !0, "#000000")), b = this.sizeCache, b.setSize(this.getNameSize() / 2), b.setValue(~~(this.size * this.size / 100)), c = Math.ceil(10 * h) / 10, b.setScale(c), d = b.render(), f = ~~(d.width / c), g = ~~(d.height / c), e.drawImage(d, ~~this.x - ~~(f / 2), a - ~~(g / 2), f, g));
+						e.restore()
+					}
+				}
+			};
+			ha.prototype = {
+				_value: "",
+				_color: "#000000",
+				_stroke: !1,
+				_strokeColor: "#000000",
+				_size: 16,
+				_canvas: null,
+				_ctx: null,
+				_dirty: !1,
+				_scale: 1,
+				setSize: function(a) {
+					this._size != a && (this._size = a, this._dirty = !0)
+				},
+				setScale: function(a) {
+					this._scale != a && (this._scale = a, this._dirty = !0)
+				},
+				setColor: function(a) {
+					this._color != a && (this._color = a, this._dirty = !0)
+				},
+				setStroke: function(a) {
+					this._stroke != a && (this._stroke = a, this._dirty = !0)
+				},
+				setStrokeColor: function(a) {
+					this._strokeColor != a && (this._strokeColor = a, this._dirty = !0)
+				},
+				setValue: function(a) {
+					a != this._value && (this._value = a, this._dirty = !0)
+				},
+				render: function() {
+					null == this._canvas && (this._canvas = document.createElement("canvas"), this._ctx = this._canvas.getContext("2d"));
+					if (this._dirty) {
+						this._dirty = !1;
+						var a = this._canvas,
+							b = this._ctx,
+							c = this._value,
+							d = this._scale,
+							e = this._size,
+							f = e + "px Ubuntu";
+						b.font = f;
+						var g = b.measureText(c).width,
+							h = ~~(.2 * e);
+						a.width = (g + 6) * d;
+						a.height = (e + h) * d;
+						b.font = f;
+						b.scale(d, d);
+						b.globalAlpha = 1;
+						b.lineWidth = 3;
+						b.strokeStyle = this._strokeColor;
+						b.fillStyle = this._color;
+						this._stroke && b.strokeText(c, 3, e - h / 2);
+						b.fillText(c, 3, e - h / 2)
+					}
+					return this._canvas
+				}
+			};
+			self.onload = Pa
+		}
+	}
+
+	var ai=window.ai=new Ai(
+		function(x1,y2){W=x1;X=y2;emit()},
+		function(){registerEvent(17)},
+		function(){registerEvent(21)})
+	var onUpdate=Ua
+	Ua=function(d,c){
+		onUpdate(d,c)
+		ai.tick(n,l,H) //blobs,myblobs,score
+	}
+	var onDeath=Aa
+	Aa=function(a){
+		//onDeath(a)
+		D=null
+		setTimeout(function(){setNick(skinNames[~~(skinNames.length*Math.pow(Math.random(),2))])},5000)
+	}
 })(window, jQuery);
 
-window.skinNames=[
-    'Yaranaika',
-    'Pokerface',
-    'Sir',
-    'Mars',
-    'Stalin',
-    'Moon',
-    'Wojak',
-    'Imperial Japan',
-    'Doge',
-    'Earth',
-    'Bait',
-    'Steam',
-    'Piccolo',
-    'Sanik',
-    'Cia',
-    '4chan',
-    'Ayy Lmao',
-    'Qing Dynasty'
-]
 
+window.skinNames=[
+	'hacker',
+	'cheater'
+	//'Yaranaika',
+	//'Pokerface',
+	//'Sir',
+	//'Mars',
+	//'Stalin',
+	//'Moon',
+	//'Wojak',
+	//'Imperial Japan',
+	//'Doge',
+	//'Earth',
+	//'Bait',
+	//'Steam',
+	//'Piccolo',
+	//'Sanik',
+	//'Cia',
+	//'4chan',
+	//'Ayy Lmao',
+	//'Qing Dynasty'
+];
+var $playBtn = $('#playBtn');
 $('#nick').parent().remove();
-$('#playBtn')
-    .after($('#playBtn').removeAttr('onclick').clone().click(function(e){
-        setNick(window.skinNames[~~(window.skinNames.length*Math.random())]);
-        return false;
-    })).remove()
+$playBtn
+	.after($playBtn.removeAttr('onclick').clone().click(function(e){
+		setNick(window.skinNames[~~(window.skinNames.length*Math.random())]);
+		return false;
+	})).remove()
 $('#gamemode').remove()
-$('#playBtn').next().remove()
+$playBtn.next().remove()
 
 setDarkTheme(true);
-
-//$('body').append('<div id="ip-address"></div>')
