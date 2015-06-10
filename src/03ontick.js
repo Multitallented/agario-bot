@@ -142,17 +142,25 @@ tick: function(organisms, myOrganisms, score) {
 		}
 
 		//ignore minor threats/opportunities
-		if (isRunning && !this.opportunity && tempArray.length > 0 && biggestImpulse > 1 && Math.abs(impulse.threat * 2) < biggestImpulse) {
+		/*if (isRunning && !this.opportunity && tempArray.length > 0 && biggestImpulse > 1 && Math.abs(impulse.threat * 2) < biggestImpulse) {
 			continue;
-		}
+		}*/
 
 		//ignore threats that are farther away
-		if (!isEnemyVirus && isRunning && tempArray.length > 0 && (impulse.distance - impulse.target[0].size - impulse.enemy.size) / 1.75 > closestThreat) {
+		if (!isEnemyVirus &&
+			isRunning &&
+			tempArray.length > 0 &&
+			(impulse.distance - impulse.target[0].size - impulse.enemy.size) / 1.75 > closestThreat &&
+			Math.abs((impulse.distance - impulse.target[0].size - impulse.enemy.size) - closestThreat) > 30) {
 			continue;
 		}
 
 		//when threatened, don't show any non-immediate threats
-		if (!isEnemyVirus && this.immediateThreats && impulse.worryDistance < impulse.distance && tempArray.length > 0 && impulse.threat != 999999) {
+		if (!isEnemyVirus &&
+			this.immediateThreats &&
+			impulse.worryDistance < impulse.distance &&
+			tempArray.length > 0 &&
+			impulse.threat != 999999) {
 			continue;
 		}
 
