@@ -128,17 +128,17 @@ $('#canvas').after($('#canvas').clone().attr('id','canvas-2')).remove();
 		g("#region").val() ? g("#locationKnown").append(g("#region")) : g("#locationUnknown").append(g("#region"))
 	}
 
-	function na() {
+	function searchForServer() {
 		console.log("Find " +
 			u + M);
 		g.ajax(F + "//m.agar.io/", {
 			error: function() {
-				setTimeout(na, 1E3)
+				setTimeout(searchForServer, 1E3)
 			},
 			success: function(a) {
 				a = a.split("\n");
-				g('#ip-address').html(a[0])
-				"45.79.222.79:443" == a[0] ? na() : Fa("ws://" + a[0])
+				g('#ip-address').val(a[0])
+				"45.79.222.79:443" == a[0] ? searchForServer() : connecting("ws://" + a[0])
 			},
 			dataType: "text",
 			method: "POST",
@@ -147,12 +147,19 @@ $('#canvas').after($('#canvas').clone().attr('id','canvas-2')).remove();
 			data: u + M || "?"
 		})
 	}
+	window.connecting = connecting;
 
 	function V() {
-		ja && u && (g("#connecting").show(), na())
+		ja && u && (g("#connecting").show(), searchForServer())
 	}
 
-	function Fa(a) {
+	function connecting(a) {
+		if (a.indexOf(':') == -1) {
+			a += ':443';
+		}
+		if (a.indexOf('ws://') == -1) {
+			a = 'ws://' + a;
+		}
 		if (m) {
 			m.onopen = null;
 			m.onmessage = null;
@@ -919,7 +926,7 @@ $('#canvas').after($('#canvas').clone().attr('id','canvas-2')).remove();
 				ZM: "EU-London",
 				ZW: "EU-London"
 			};
-			self.connect = Fa;
+			self.connect = connecting;
 			var Z = 500,
 				Ka = -1,
 				La = -1,
@@ -1192,7 +1199,8 @@ $('#canvas').after($('#canvas').clone().attr('id','canvas-2')).remove();
 window.skinNames=[
 	'hacker',
 	'cheater',
-	"I'm afk"
+	"I'm afk",
+	'BotKnowsBest'
 	//'Yaranaika',
 	//'Pokerface',
 	//'Sir',
@@ -1221,5 +1229,12 @@ $playBtn
 	})).remove()
 $('#gamemode').remove()
 $playBtn.next().remove()
-
+$('#instructions').before('<form id="ipform" style="margin-top: 20px; width: 100%;"><input type="text" class="form-control" id="ip-address" placeholder="ip-address" /></form>');
+$('#ipform').submit(function(e) {
+	e.preventDefault();
+	var ipAddress = $('#ip-address').val();
+	connecting(ipAddress);
+	return false;
+});
+$('#instructions + hr + center').remove();
 setDarkTheme(true);
