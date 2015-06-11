@@ -61,7 +61,15 @@ document.onkeypress = function(e) {
         }
     } else if (e.keyCode == 97) {
         window.botEnabled = !window.botEnabled;
-    } else if (e.keyCode == 103) {
+    } else if (e.keyCode == 104) { //h
         runOnce = true;
+    } else if (e.keyCode == 100) { //d
+	    if (aggressive) {
+		    aggressive = false;
+	    } else {
+		    aggressive = true;
+	    }
+    } else if (e.keyCode == 103) { //g
+	    smartShoot = true;
     }
 }

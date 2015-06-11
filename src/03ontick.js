@@ -11,6 +11,12 @@ tick: function(organisms, myOrganisms, score) {
 	var organismState = new OrganismState(myOrganisms, organisms);
 
 	var myOrganism = new MyOrganism(myOrganisms);
+	if (runOnce) {
+		console.log(organismState);
+		console.log(myOrganism);
+		runOnce = false;
+	}
+
 	$massStat.text('Size: ' + Math.floor(myOrganism.size) + ':' + Math.floor(myOrganism.mass) + '(x' + Math.floor(myOrganism.ox) + ',y' + Math.floor(myOrganism.oy) + ')');
 	$dodgeStat.text('Speed: (' + Math.floor(myOrganism.direction) + ')' + Math.floor(myOrganism.speed) + ' { ' + Math.floor(myOrganism.dx) + ' , ' + Math.floor(myOrganism.dy) + ' }');
 
@@ -48,6 +54,7 @@ tick: function(organisms, myOrganisms, score) {
 	runCooldownString += ' Immediate: ' + (this.immediateThreats ? '<span style="color: red;">True</span>' : '<span style="color: green;">False</span>');
 	runCooldownString += '<br>Enabled: ' + (window.botEnabled ? '<span style="color: green;">True</span>' : '<span style="color: blue;">False</span>');
 	runCooldownString += ' Opportunity: ' + (this.opportunity ? '<span style="color: green;">True</span>' : '<span style="color: blue;">False</span>');
+	runCooldownString += ' Aggressive: ' + (aggressive ? '<span style="color: red;">True</span>' : '<span style="color: green;">False</span>');
 	$runCooldown.html(runCooldownString);
 
 	//If under threat, add threats for near edges
@@ -107,12 +114,19 @@ tick: function(organisms, myOrganisms, score) {
 	var closestThreat = 999999;
 	var biggestThreat = -1;
 	var smallestThreat = 999999;
+	var closestVirus = null;
+	var closestVirusDistance = 999999;
 	var isRunning = this.immediateThreats || (this.threatened && this.runCooldown > 0);
 
 	for (var i=0; i< this.impulses.length; i++) {
 		var impulse = this.impulses[i];
 		if (impulse.threat > 0) {
 			closestThreat = Math.min(impulse.distance - impulse.target[0].size - impulse.enemy.size, closestThreat);
+		}
+
+		if (impulse.enemy.isVirus && impulse.distance < closestVirusDistance) {
+			closestVirusDistance = impulse.distance;
+			closestVirus = impulse;
 		}
 
 		if (impulse.threat == 999999) {
@@ -128,11 +142,65 @@ tick: function(organisms, myOrganisms, score) {
 		biggestImpulse = biggestThreat;
 	}
 
+	//Shoot mass behavior
+	if (smartShoot && this.smartShootCount < 1) {
+		smartShoot = false;
+		if (closestVirus != null && closestVirusDistance - myOrganism.size < 600) {
+			this.smartShootCount = Math.ceil((91 - (Math.floor(closestVirus.enemy.mass) - 100)) / 13);
+		}
+		var totalShootableMass = 0;
+		var availableShooters = [];
+		for (var i=0; i<myOrganism.organisms.length; i++) {
+			var currentFriendly = myOrganism.organisms[i];
+			var shotsAvailable = Math.ceil((currentFriendly.mass - 32) / 13);
+			shotsAvailable = shotsAvailable > 0 ? shotsAvailable : 0;
+			totalShootableMass += shotsAvailable;
+			if (shotsAvailable > 0) {
+				availableShooters.push(shotsAvailable);
+			}
+		}
+		var shotsRequired = 0;
+		var rawShotCount = this.smartShootCount;
+		while (rawShotCount > 0 && totalShootableMass > 0) {
+			var shotAvailable = false;
+			for (var i=0; i< availableShooters.length; i++) {
+				if (availableShooters[i] > 0) {
+					shotAvailable = true;
+					availableShooters[i]--;
+					totalShootableMass--;
+					rawShotCount--;
+				}
+			}
+			if (shotAvailable) {
+				shotsRequired++;
+			} else {
+				break;
+			}
+		}
+		if (rawShotCount < 1) {
+			this.smartShootCount = shotsRequired;
+		}
+
+	}
+	if (this.smartShootCount > 0 && (closestVirus == null || closestVirusDistance > 599)) {
+		this.smartShootCount = 0;
+	}
+
 	for (var i=0; i< this.impulses.length; i++) {
 		var impulse = this.impulses[i];
 		var isEnemyVirus = impulse.enemy.isVirus && impulse.threat > -1;
 
-		if (isRunning && myOrganism.organisms.length > 3 && impulse.threat == 999999 && impulse.worryDistance < impulse.distance) {
+		//aggressive ignores skittles
+		if (aggressive && this.opportunity && impulse.threat == -1) {
+			continue;
+		}
+
+		//Hyper Aggressive behavior ignores non-consume threats
+		if (aggressive &&
+			this.opportunity &&
+			impulse.threat > 0 &&
+			impulse.distance > (getConsumeDistance(impulse.enemy, impulse.target[0]) * 1.15 + currentFriendly.speed * 2 + 10)) {
+			if (isRunning && myOrganism.organisms.length > 3 && impulse.threat == 999999 && impulse.worryDistance < impulse.distance) {
 			continue;
 		}
 
@@ -152,17 +220,25 @@ tick: function(organisms, myOrganisms, score) {
 		}
 
 		//ignore minor threats/opportunities
-		if (isRunning && !this.opportunity && tempArray.length > 0 && biggestImpulse > 1 && Math.abs(impulse.threat * 2) < biggestImpulse) {
+		/*if (isRunning && !this.opportunity && tempArray.length > 0 && biggestImpulse > 1 && Math.abs(impulse.threat * 2) < biggestImpulse) {
 			continue;
-		}
+		}*/
 
 		//ignore threats that are farther away
-		if (!isEnemyVirus && isRunning && tempArray.length > 0 && (impulse.distance - impulse.target[0].size - impulse.enemy.size) / 1.75 > closestThreat) {
+		if (!isEnemyVirus &&
+			isRunning &&
+			tempArray.length > 0 &&
+			(impulse.distance - impulse.target[0].size - impulse.enemy.size) / 1.75 > closestThreat &&
+			Math.abs((impulse.distance - impulse.target[0].size - impulse.enemy.size) - closestThreat) > 30) {
 			continue;
 		}
 
 		//when threatened, don't show any non-immediate threats
-		if (!isEnemyVirus && this.immediateThreats && impulse.worryDistance < impulse.distance && tempArray.length > 0 && impulse.threat != 999999) {
+		if (!isEnemyVirus &&
+			this.immediateThreats &&
+			impulse.worryDistance < impulse.distance &&
+			tempArray.length > 0 &&
+			impulse.threat != 999999) {
 			continue;
 		}
 
@@ -172,12 +248,12 @@ tick: function(organisms, myOrganisms, score) {
 		}
 
 		//if threatened and running, skip opportunities
-		if (!isEnemyVirus && isRunning && impulse.threat < 1) {
+		if ((!aggressive || this.immediateThreats) && !isEnemyVirus && isRunning && impulse.threat < 1) {
 			continue;
 		}
 
 		//don't chase people you can't catch
-		if (!isEnemyVirus && this.opportunity && !isRunning && impulse.threat < -1 && impulse.enemy.dx != 0 && impulse.worryDistance + 100 < impulse.distance) {
+		if (!aggressive && !isEnemyVirus && this.opportunity && !isRunning && impulse.threat < -1 && impulse.enemy.dx != 0 && impulse.worryDistance + 100 < impulse.distance) {
 			continue;
 		}
 
@@ -289,7 +365,12 @@ tick: function(organisms, myOrganisms, score) {
 		moveDistance = 400;
 	}
 
-	var moveCoords = toCoords(moveDirection, myOrganism.ox, myOrganism.oy, moveDistance);
+	var moveCoords = null;
+	if (this.smartShootCount > 0) {
+		moveCoords = toCoords(closestVirus.direction,myOrganism.ox, myOrganism.oy,3);
+	} else {
+		moveCoords = toCoords(moveDirection, myOrganism.ox, myOrganism.oy, moveDistance);
+	}
 
 	if (this.opportunity && opportunity != null) {
 		moveCoords.x += opportunity.enemy.dx * 5;
@@ -304,7 +385,7 @@ tick: function(organisms, myOrganisms, score) {
 	if (window.botEnabled) {
 		this.move(moveCoords.x, moveCoords.y);
 		//TODO possible button cooldown
-		if (shouldSplit) {
+		if (shouldSplit && this.smartShootCount < 1) {
 			if (opportunity != null) {
 				this.attackTarget = opportunity;
 			}
@@ -312,5 +393,9 @@ tick: function(organisms, myOrganisms, score) {
 			this.attackSplitCooldown = 40;
 			this.defenseSplitCooldown = 20;
 		}
+	}
+	if (this.smartShootCount > 0) {
+		this.shoot();
+		this.smartShootCount--;
 	}
 },
