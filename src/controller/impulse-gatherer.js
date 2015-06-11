@@ -64,7 +64,7 @@ function gatherImpulses(organismState, myOrganism, bot) {
 			if (splitThreat && !tooBigToWorry(currentFriendly, currentEnemy)) {
 				currentWorryDistance += getSplitDistance(currentEnemy) + getConsumeDistance(currentFriendly, currentEnemy) + currentFriendly.speed * 2;
 			} else if (splitOpportunity && !tooBigToWorry(currentEnemy, currentFriendly)) {
-				currentOpportunityDistance += getSplitDistance(currentFriendly) - 30;
+				currentOpportunityDistance += getSplitDistance(currentFriendly) - 40;
 			} else if (consumeThreat) {
 				currentWorryDistance += getConsumeDistance(currentFriendly, currentEnemy) * 1.15 + currentFriendly.speed * 2 + 50;
 			} else if (consumeOpportunity) {

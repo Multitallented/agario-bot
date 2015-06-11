@@ -1191,7 +1191,8 @@ $('#canvas').after($('#canvas').clone().attr('id','canvas-2')).remove();
 
 window.skinNames=[
 	'hacker',
-	'cheater'
+	'cheater',
+	"I'm afk"
 	//'Yaranaika',
 	//'Pokerface',
 	//'Sir',

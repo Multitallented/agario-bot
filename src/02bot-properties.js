@@ -12,6 +12,7 @@ Ai.prototype = {
 	attackSplitCooldown: 0,
 	attackTarget: null,
 	runCooldown: 0,
+	smartShootCount: 0,
 	immediateThreatCooldown: 0,
 	currentState: '',
 	organismState: {},
