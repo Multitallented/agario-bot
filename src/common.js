@@ -15,7 +15,7 @@ function getMass(size) {
 	return Math.pow(size, 2) / 100;
 }
 function createEdgeThreat(myOrganism) {
-	var worryDistance = myOrganism.speed * 2;
+	var worryDistance = myOrganism.size + myOrganism.speed + 10;
 	var threatDistance = myOrganism.size * 8;
 	var threatArray = [];
 	if (myOrganism.ox < threatDistance) {

@@ -37,6 +37,12 @@ tick: function(organisms, myOrganisms, score) {
 	this.opportunity = false;
 	this.immediateThreats = false;
 	this.impulses = gatherImpulses(organismState, myOrganism, this);
+
+	//defensive mode
+	if (myOrganism.organisms.length > 2) {
+		this.runCooldown = 2;
+	}
+
 	var runCooldownString = 'Safe Split: ' + (this.safeSplit ? '<span style="color: green;">True</span>' : '<span style="color: red;">False</span>');
 	runCooldownString += ' Threatened: ' + (this.threatened ? '<span style="color: red;">True</span>' : '<span style="color: green;">False</span>');
 	runCooldownString += ' Immediate: ' + (this.immediateThreats ? '<span style="color: red;">True</span>' : '<span style="color: green;">False</span>');
@@ -125,6 +131,10 @@ tick: function(organisms, myOrganisms, score) {
 	for (var i=0; i< this.impulses.length; i++) {
 		var impulse = this.impulses[i];
 		var isEnemyVirus = impulse.enemy.isVirus && impulse.threat > -1;
+
+		if (isRunning && myOrganism.organisms.length > 3 && impulse.threat == 999999 && impulse.worryDistance < impulse.distance) {
+			continue;
+		}
 
 		//follow through with a split attack
 		if (this.attackTarget != null) {
