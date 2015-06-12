@@ -23,6 +23,18 @@ draw:function(ctx){
 		}
 	}
 
+	//closest virus
+	if (this.closestVirus != null && this.closestVirus.distance < 660) {
+		ctx.beginPath();
+		ctx.strokeStyle = 'yellow';
+		ctx.moveTo(this.myOrganism.ox, this.myOrganism.oy);
+
+		var virusDegrees = toDegrees(this.myOrganism.ox, this.myOrganism.oy, this.closestVirus.enemy.ox, this.closestVirus.enemy.oy);
+		var virusCoords = toCoords(virusDegrees, this.myOrganism.ox, this.myOrganism.oy, this.closestVirus.distance + 660);
+		ctx.lineTo(virusCoords.x, virusCoords.y);
+		ctx.stroke();
+	}
+
 	//Move Direction
 	ctx.beginPath();
 	ctx.strokeStyle = 'blue';

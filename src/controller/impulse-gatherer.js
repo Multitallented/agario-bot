@@ -202,19 +202,20 @@ function gatherImpulses(organismState, myOrganism, bot) {
 			color = '#00FF00';
 			this.opportunity = true;
 		}
-
-		if (threat != 0) {
-			impulses.push(new Impulse(
-				threat,
-				currentVirus,
-				threatArray,
-				closestDistance,
-				worryDistance,
-				direction,
-				label,
-				color
-			));
+		if (isNaN(threat)) {
+			threat = 0;
 		}
+
+		impulses.push(new Impulse(
+			Math.floor(threat),
+			currentVirus,
+			threatArray,
+			closestDistance,
+			worryDistance,
+			direction,
+			label,
+			color
+		));
 	}
 
 	//Skittles

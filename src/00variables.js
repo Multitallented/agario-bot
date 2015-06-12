@@ -6,3 +6,4 @@ var runOnce = false;
 var aggressive = false;
 var smartShoot = false;
 window.botEnabled = true;
+window.botOverride = false;

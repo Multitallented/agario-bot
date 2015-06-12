@@ -115,7 +115,7 @@ tick: function(organisms, myOrganisms, score) {
 	var closestOpportunity = 999999;
 	var biggestThreat = -1;
 	var smallestThreat = 999999;
-	var closestVirus = null;
+	this.closestVirus = null;
 	var closestVirusDistance = 999999;
 	var isRunning = this.immediateThreats || (this.threatened && this.runCooldown > 0);
 
@@ -133,7 +133,7 @@ tick: function(organisms, myOrganisms, score) {
 
 		if (impulse.enemy.isVirus && impulse.distance < closestVirusDistance) {
 			closestVirusDistance = impulse.distance;
-			closestVirus = impulse;
+			this.closestVirus = impulse;
 		}
 
 		if (impulse.threat == 999999) {
@@ -152,8 +152,8 @@ tick: function(organisms, myOrganisms, score) {
 	//Shoot mass behavior
 	if (smartShoot && this.smartShootCount < 1) {
 		smartShoot = false;
-		if (closestVirus != null && closestVirusDistance - myOrganism.size < 600) {
-			this.smartShootCount = Math.ceil((91 - (Math.floor(closestVirus.enemy.mass) - 100)) / 13);
+		if (this.closestVirus != null && closestVirusDistance - myOrganism.size < 600) {
+			this.smartShootCount = Math.ceil((91 - (Math.floor(this.closestVirus.enemy.mass) - 100)) / 13);
 		}
 		var totalShootableMass = 0;
 		var availableShooters = [];
@@ -189,7 +189,7 @@ tick: function(organisms, myOrganisms, score) {
 		}
 
 	}
-	if (this.smartShootCount > 0 && (closestVirus == null || closestVirusDistance > 599)) {
+	if (this.smartShootCount > 0 && (this.closestVirus == null || closestVirusDistance > 599)) {
 		this.smartShootCount = 0;
 	}
 
@@ -221,7 +221,7 @@ tick: function(organisms, myOrganisms, score) {
 		}
 
 		//ignore non-threats and non-opportunities
-		if (!isEnemyVirus && impulse.threat == 0) {
+		if (impulse.threat == 0) {
 			continue;
 		}
 
@@ -407,7 +407,7 @@ tick: function(organisms, myOrganisms, score) {
 
 	var moveCoords = null;
 	if (this.smartShootCount > 0) {
-		moveCoords = toCoords(closestVirus.direction,myOrganism.ox, myOrganism.oy,3);
+		moveCoords = toCoords(this.closestVirus.direction,myOrganism.ox, myOrganism.oy,10);
 	} else {
 		moveCoords = toCoords(moveDirection, myOrganism.ox, myOrganism.oy, moveDistance);
 	}
@@ -422,7 +422,8 @@ tick: function(organisms, myOrganisms, score) {
 		}
 	}
 	this.moveCoords = moveCoords;
-	if (window.botEnabled || this.defenseSplitCooldown > 0 || (shouldSplit && this.impulses[0].threat > 0)) {
+	window.botOverride = (this.smartShootCount > 0 || this.defenseSplitCooldown > 0 || (shouldSplit && this.impulses[0].threat > 0));
+	if (window.botEnabled || window.botOverride) {
 		this.move(moveCoords.x, moveCoords.y);
 		if (shouldSplit && this.smartShootCount < 1) {
 			if (opportunity != null) {
@@ -433,8 +434,11 @@ tick: function(organisms, myOrganisms, score) {
 			this.defenseSplitCooldown = 20;
 		}
 	}
-	if (this.smartShootCount > 0) {
+	if (this.smartShootCount > 0 && !this.shotLastTick) {
 		this.shoot();
 		this.smartShootCount--;
+		this.shotLastTick = true;
+	} else {
+		this.shotLastTick = false;
 	}
 },

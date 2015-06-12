@@ -50,7 +50,7 @@ $('#canvas').after($('#canvas').clone().attr('id','canvas-2')).remove();
 		onResize();
 		self.requestAnimationFrame ? self.requestAnimationFrame(anim) : setInterval(draw, 1E3 / 60);
 		setInterval(function() {
-			if (!window.botEnabled) {
+			if (!window.botEnabled && !window.botOverride) {
 				emit();
 			}
 		}, 40);
@@ -1197,9 +1197,9 @@ $('#canvas').after($('#canvas').clone().attr('id','canvas-2')).remove();
 
 
 window.skinNames=[
-	'hacker',
-	'cheater',
-	"I'm afk",
+	//'hacker',
+	//'cheater',
+	//"I'm afk",
 	'BotKnowsBest'
 	//'Yaranaika',
 	//'Pokerface',
