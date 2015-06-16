@@ -118,10 +118,10 @@ tick: function(organisms, myOrganisms, score) {
 	this.closestVirus = null;
 	var closestVirusDistance = 999999;
 	var isRunning = this.immediateThreats || (this.threatened && this.runCooldown > 0);
-
 	for (var i=0; i< this.impulses.length; i++) {
 		var impulse = this.impulses[i];
 		var mySize = myOrganism.size;
+
 		if (impulse.target.length > 0) {
 			mySize = impulse.target[0].size;
 		}
@@ -195,6 +195,18 @@ tick: function(organisms, myOrganisms, score) {
 
 	for (var i=0; i< this.impulses.length; i++) {
 		var impulse = this.impulses[i];
+
+		if (impulse.enemy.name == "BotKnowsBest") {
+			if (!this.immediateThreats || i == 0) {
+				tempArray = [];
+				impulse.threat = -999999;
+				tempArray.push(impulse);
+				break;
+			} else {
+				impulse.threat = -impulse.enemy.mass;
+			}
+		}
+
 		var isEnemyVirus = impulse.enemy.isVirus && impulse.threat > -1;
 
 		//aggressive ignores skittles
@@ -385,7 +397,9 @@ tick: function(organisms, myOrganisms, score) {
 				(myOrganism.organisms.length < 3 && organismState.viruses.length > 2) ||
 				(!this.threatened)) &&
 				impulse.enemy.dx != 0 &&
-				this.attackSplitCooldown < 1) {
+				this.attackSplitCooldown < 1 &&
+				myOrganism.size < 1000 &&
+				impulse.enemy.name != "BotKnowsBest") {
 				shouldSplit = true;
 			}
 		}

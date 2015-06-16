@@ -87,5 +87,5 @@ function canBeSplitAttacked(food, eater) {
 	return food.mass * 1.3 < eater.mass / 2;
 }
 function canBeEaten(food, eater) {
-	return eater.mass - food.mass > 15 && food.mass * 1.18 < eater.mass;
+	return eater.mass - food.mass > 15 && food.mass * 1.22 < eater.mass;
 }
