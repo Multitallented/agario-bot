@@ -55,6 +55,9 @@ tick: function(organisms, myOrganisms, score) {
 	runCooldownString += '<br>Enabled: ' + (window.botEnabled ? '<span style="color: green;">True</span>' : '<span style="color: blue;">False</span>');
 	runCooldownString += ' Opportunity: ' + (this.opportunity ? '<span style="color: green;">True</span>' : '<span style="color: blue;">False</span>');
 	runCooldownString += ' Aggressive: ' + (aggressive ? '<span style="color: red;">True</span>' : '<span style="color: green;">False</span>');
+	runCooldownString += '<br>Split: ' + (!dontSplit ? '<span style="color: green;">Enabled</span>' : '<span style="color: red;">Disabled</span>');
+	runCooldownString += ' Cooldown: ' + (!this.shotLastCooldown ? '<span style="color: green;">No</span>' : '<span style="color: red;">Yes</span>');
+	runCooldownString += ' (' + this.smartShootCount + ')';
 	$runCooldown.html(runCooldownString);
 
 	//If under threat, add threats for near edges
@@ -186,6 +189,8 @@ tick: function(organisms, myOrganisms, score) {
 		}
 		if (rawShotCount < 1) {
 			this.smartShootCount = shotsRequired;
+		} else {
+			this.smartShootCount = 0;
 		}
 
 	}
@@ -422,10 +427,10 @@ tick: function(organisms, myOrganisms, score) {
 		}
 	}
 	this.moveCoords = moveCoords;
-	window.botOverride = (this.smartShootCount > 0 || this.defenseSplitCooldown > 0 || (shouldSplit && this.impulses[0].threat > 0));
-	if (window.botEnabled || window.botOverride) {
+	window.botOverride = (this.shotLastCooldown || this.defenseSplitCooldown > 0 || (shouldSplit && this.impulses[0].threat > 0));
+	if ((window.botEnabled || window.botOverride) && !this.shotLastCooldown) {
 		this.move(moveCoords.x, moveCoords.y);
-		if (shouldSplit && this.smartShootCount < 1) {
+		if (shouldSplit && this.smartShootCount < 1 && !dontSplit) {
 			if (opportunity != null) {
 				this.attackTarget = opportunity;
 			}
@@ -434,11 +439,27 @@ tick: function(organisms, myOrganisms, score) {
 			this.defenseSplitCooldown = 20;
 		}
 	}
-	if (this.smartShootCount > 0 && !this.shotLastTick) {
-		this.shoot();
-		this.smartShootCount--;
-		this.shotLastTick = true;
-	} else {
-		this.shotLastTick = false;
+	//async shoot
+	if (this.smartShootCount > 0 && !this.shotLastCooldown) {
+		this.shotLastCooldown = true;
+		for (var i=0; i<this.smartShootCount - 1; i++) {
+			setTimeout(function() {
+				window.ai.moveCoords = toCoords(moveDirection, myOrganism.ox, myOrganism.oy, 400);
+				window.ai.move(window.ai.moveCoords.x, window.ai.moveCoords.y);
+			}, i * 80 + 60);
+		}
+		for (var i=0; i<this.smartShootCount; i++) {
+			setTimeout(pressW, i * 80);
+		}
+		for (var i=0; i<this.smartShootCount; i++) {
+			setTimeout(function() {
+				window.ai.moveCoords = toCoords(sanitizeDegrees(180 + moveDirection), myOrganism.ox, myOrganism.oy, 400);
+				window.ai.move(window.ai.moveCoords.x, window.ai.moveCoords.y);
+			}, i * 80 + 20);
+		}
+		setTimeout(function() {
+			window.ai.shotLastCooldown = false;
+		}, this.smartShootCount * 80 + 21);
+		this.smartShootCount = 0;
 	}
 },

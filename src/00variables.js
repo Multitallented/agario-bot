@@ -5,5 +5,6 @@ var lastSize = 10;
 var runOnce = false;
 var aggressive = false;
 var smartShoot = false;
+var dontSplit = false;
 window.botEnabled = true;
 window.botOverride = false;

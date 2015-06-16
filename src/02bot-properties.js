@@ -14,7 +14,7 @@ Ai.prototype = {
 	closestVirus: null,
 	runCooldown: 0,
 	smartShootCount: 0,
-	shotLastTick: false,
+	shotLastCooldown: false,
 	immediateThreatCooldown: 0,
 	currentState: '',
 	organismState: {},

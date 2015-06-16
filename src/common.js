@@ -75,16 +75,19 @@ function distance(organism1, organism2) {
 }
 function getSplitDistance(eater) {
 	//return eater.size * (3 - eater.size / 275) + 225;
+	if (eater.size < 50) {
+		return 600;
+	}
 	return 660;
 }
 function getConsumeDistance(food, eater) {
 	return eater.size;
 }
 function canBeSplitEaten(food, eater) {
-	return food.mass * 1.18 < eater.mass / 2;
+	return food.mass * 1.333 < eater.mass / 2;
 }
 function canBeSplitAttacked(food, eater) {
-	return food.mass * 1.3 < eater.mass / 2;
+	return food.mass * 1.333 < eater.mass / 2;
 }
 function canBeEaten(food, eater) {
 	return eater.mass - food.mass > 15 && food.mass * 1.18 < eater.mass;

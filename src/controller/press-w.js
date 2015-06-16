@@ -55,11 +55,11 @@ function pressW() {
 window.pressW = pressW;
 document.onkeypress = function(e) {
     e = e || window.event;
-    if (e.keyCode == 102) {
+    if (e.keyCode == 102) { //f
         for (var i = 0; i<7; i++) {
             setTimeout(pressW, i * 80);
         }
-    } else if (e.keyCode == 97) {
+    } else if (e.keyCode == 97) { //a
         window.botEnabled = !window.botEnabled;
     } else if (e.keyCode == 104) { //h
         runOnce = true;
@@ -71,5 +71,7 @@ document.onkeypress = function(e) {
 	    }
     } else if (e.keyCode == 103) { //g
 	    smartShoot = true;
+    } else if (e.keyCode == 115) { //s
+	    dontSplit = !dontSplit;
     }
-}
+};
