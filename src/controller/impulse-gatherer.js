@@ -32,7 +32,9 @@ function gatherImpulses(organismState, myOrganism, bot) {
 			var relativeDistance = distance(currentFriendly, myOrganism) * Math.cos(directionDifference);
 
 			//check for safe split
-			if (consumeThreat && !tooBigToWorry(myOrganism, currentEnemy) && currentDistance < getSplitDistance(currentEnemy) + getConsumeDistance(currentFriendly, currentEnemy)) {
+			if (consumeThreat && !tooBigToWorry(myOrganism, currentEnemy) &&
+				(currentDistance < getSplitDistance(currentEnemy) + getConsumeDistance(currentFriendly, currentEnemy) ||
+				currentDistance < getConsumeDistance(currentFriendly, currentEnemy))) {
 				bot.safeSplit = false;
 			}
 
@@ -106,6 +108,10 @@ function gatherImpulses(organismState, myOrganism, bot) {
 
 		if (threat > 0) {
 			bot.threatened = true;
+
+			if (myOrganism.mass < 51) {
+				worryDistance += 20;
+			}
 
 			if (worryDistance > closestDistance) {
 				bot.immediateThreats = true;
