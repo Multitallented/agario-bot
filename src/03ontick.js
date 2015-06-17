@@ -307,11 +307,32 @@ tick: function(organisms, myOrganisms, score) {
 		}*/
 
 		//don't chase people you can't catch
-		if (!aggressive && !isEnemyVirus && this.opportunity && !isRunning && impulse.threat < -1 && impulse.enemy.dx != 0 && impulse.worryDistance + 100 < impulse.distance) {
+		if (!aggressive &&
+			(myOrganism.organisms.length > 1 || myOrganism.mass < 650) &&
+			!isEnemyVirus &&
+			this.opportunity &&
+			!isRunning &&
+			impulse.threat < -1 &&
+			impulse.enemy.dx != 0 &&
+			impulse.worryDistance + 100 < impulse.distance) {
 			continue;
 		}
 
-		if (previousThreat < 0) {
+		//ignore less juicy opportunities
+		if (previousThreat < 0 &&
+			tempArray.length > 0 &&
+			!isRunning &&
+			this.opportunity &&
+			this.impulses[0].threat / 2 < impulse.threat) {
+			continue;
+		}
+		//ignore opportunities that are exceedingly far away
+		if (previousThreat < 0 &&
+			tempArray.length > 0 &&
+			!isRunning &&
+			tempArray[0].threat < 0 &&
+			!this.opportunity &&
+			impulse.distance > tempArray[0].distance * 2) {
 			continue;
 		}
 		tempArray.push(impulse);
@@ -356,7 +377,8 @@ tick: function(organisms, myOrganisms, score) {
 	var opportunity = null;
 	var moveDistance = 0;
 	var moveDirection = 0;
-	var biggestOpportunityDirection = 0;
+	var biggestOpportunityAngle = 0;
+	var currentOpportunityAngle = [];
 	var opportunityAngle = Math.atan2(myOrganism.size / getSplitDistance(myOrganism)) * 2;
 	var gap = -1;
 	for (var i = 0; i < this.impulses.length; i++) {
@@ -369,13 +391,14 @@ tick: function(organisms, myOrganisms, score) {
 				moveDirection = impulse.direction;
 			}
 		} else {
-			if (isRunning || myOrganism.organisms.length > 1) {
-				var currentGap = -1;
-				if (i == 0) {
-					currentGap = (360 + impulse.direction) - this.impulses[this.impulses.length - 1].direction;
-				} else {
-					currentGap = impulse.direction - this.impulses[i - 1].direction;
-				}
+			var currentGap = -1;
+			if (i == 0) {
+				currentGap = (360 + impulse.direction) - this.impulses[this.impulses.length - 1].direction;
+			} else {
+				currentGap = impulse.direction - this.impulses[i - 1].direction;
+			}
+
+			if (isRunning) {
 				var isNewGap = (gap == -1 ||
 				(isRunning && currentGap > gap) ||
 				(!isRunning && currentGap < gap));
@@ -388,8 +411,50 @@ tick: function(organisms, myOrganisms, score) {
 					}
 				}
 			} else {
-				var opportunityTotal = 0;
-				//TODO find the direction that has the most opportunity within +/- the opportunity angle
+				var currentTotalThreat = 0;
+				var currentTotalGap = 0;
+				if (i==0 && this.impulses.length > 1) {
+					currentOpportunityAngle.push({
+						threat: this.impulses[this.impulses.length -1].threat,
+						gap: -1,
+						direction: this.impulses[this.impulses.length -1].direction
+					});
+				}
+				currentOpportunityAngle.push({
+					threat: impulse.threat,
+					gap: currentGap,
+					direction: impulse.direction
+				});
+
+				for (var j=0;j<currentOpportunityAngle.length; j++) {
+					currentTotalThreat += currentOpportunityAngle[j].threat;
+					if (j != 0) {
+						currentTotalGap += currentOpportunityAngle[j].gap;
+					}
+				}
+
+				while (currentTotalGap > opportunityAngle) {
+					if (currentOpportunityAngle.length > 1) {
+						currentTotalGap -= currentOpportunityAngle[1].gap;
+						currentTotalThreat -= currentOpportunityAngle[0].threat;
+						currentOpportunityAngle.splice(0,1);
+					} else {
+						break;
+					}
+				}
+
+				if (currentTotalThreat <= biggestOpportunityAngle) {
+					biggestOpportunityAngle = currentTotalThreat;
+					if (currentOpportunityAngle.length > 1) {
+						if (currentOpportunityAngle[0].gap == -1) {
+							moveDirection = sanitizeDegrees(currentOpportunityAngle[0].direction + (360 + currentOpportunityAngle[currentOpportunityAngle.length -1].direction - currentOpportunityAngle[0].direction) / 2);
+						} else {
+							moveDirection = sanitizeDegrees(currentOpportunityAngle[0].direction + (currentOpportunityAngle[currentOpportunityAngle.length - 1].direction - currentOpportunityAngle[0].direction) / 2);
+						}
+					} else {
+						moveDirection = impulse.direction;
+					}
+				}
 			}
 		}
 
