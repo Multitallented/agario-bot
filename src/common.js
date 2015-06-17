@@ -16,7 +16,7 @@ function getMass(size) {
 }
 function createEdgeThreat(myOrganism) {
 	var worryDistance = myOrganism.size + myOrganism.speed + 10;
-	var threatDistance = myOrganism.size * 8;
+	var threatDistance = myOrganism.size * 2 + 660;
 	var threatArray = [];
 	if (myOrganism.ox < threatDistance) {
 		threatArray.push(new Impulse(999999, {name: 'Left Edge', ox: 0, oy: myOrganism.oy, dx: 0, dy: 0, mass: 999999}, myOrganism.organisms, myOrganism.ox, worryDistance, 180, 'Left Edge', '#FF0000'));
@@ -75,7 +75,7 @@ function distance(organism1, organism2) {
 }
 function getSplitDistance(eater) {
 	//return eater.size * (3 - eater.size / 275) + 225;
-	if (eater.size < 50) {
+	if (eater.size < 45) {
 		return 600;
 	}
 	return 660;
