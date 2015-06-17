@@ -11,11 +11,6 @@ tick: function(organisms, myOrganisms, score) {
 	var organismState = new OrganismState(myOrganisms, organisms);
 
 	var myOrganism = new MyOrganism(myOrganisms);
-	if (runOnce) {
-		console.log(organismState);
-		console.log(myOrganism);
-		runOnce = false;
-	}
 
 	$massStat.text('Size: ' + Math.floor(myOrganism.size) + ':' + Math.floor(myOrganism.mass) + '(x' + Math.floor(myOrganism.ox) + ',y' + Math.floor(myOrganism.oy) + ')');
 	$dodgeStat.text('Speed: (' + Math.floor(myOrganism.direction) + ')' + Math.floor(myOrganism.speed) + ' { ' + Math.floor(myOrganism.dx) + ' , ' + Math.floor(myOrganism.dy) + ' }');
@@ -364,6 +359,8 @@ tick: function(organisms, myOrganisms, score) {
 		this.runCooldown = 40;
 	}
 
+	var closestImpulse = this.impulses[0];
+
 	//sort by direction
 	if (this.impulses.length > 1) {
 		this.impulses.sort(function(a, b) {
@@ -374,12 +371,11 @@ tick: function(organisms, myOrganisms, score) {
 
 	//Find vector and split or shoot
 	var shouldSplit = false;
-	var opportunity = null;
 	var moveDistance = 0;
 	var moveDirection = 0;
 	var biggestOpportunityAngle = 0;
+	var biggestOpportunity = [];
 	var currentOpportunityAngle = [];
-	var opportunityAngle = Math.atan2(myOrganism.size / getSplitDistance(myOrganism)) * 2;
 	var gap = -1;
 	for (var i = 0; i < this.impulses.length; i++) {
 		var impulse = this.impulses[i];
@@ -389,6 +385,16 @@ tick: function(organisms, myOrganisms, score) {
 				moveDirection = sanitizeDegrees(impulse.direction + 180);
 			} else {
 				moveDirection = impulse.direction;
+				biggestOpportunityAngle = impulse.threat;
+				currentOpportunityAngle.push({threat: impulse.threat,
+					gap: 0,
+					direction: impulse.direction,
+					enemy: impulse.enemy,
+					target: impulse.target,
+					worryDistance: impulse.worryDistance,
+					distance: impulse.distance
+				});
+				biggestOpportunity = currentOpportunityAngle;
 			}
 		} else {
 			var currentGap = -1;
@@ -417,13 +423,21 @@ tick: function(organisms, myOrganisms, score) {
 					currentOpportunityAngle.push({
 						threat: this.impulses[this.impulses.length -1].threat,
 						gap: -1,
-						direction: this.impulses[this.impulses.length -1].direction
+						direction: this.impulses[this.impulses.length -1].direction,
+						enemy: this.impulses[this.impulses.length -1].enemy,
+						target: this.impulses[this.impulses.length -1].target,
+						worryDistance: this.impulses[this.impulses.length -1].worryDistance,
+						distance: this.impulses[this.impulses.length -1].distance
 					});
 				}
 				currentOpportunityAngle.push({
 					threat: impulse.threat,
 					gap: currentGap,
-					direction: impulse.direction
+					direction: impulse.direction,
+					enemy: impulse.enemy,
+					target: impulse.target,
+					worryDistance: impulse.worryDistance,
+					distance: impulse.distance
 				});
 
 				for (var j=0;j<currentOpportunityAngle.length; j++) {
@@ -433,7 +447,7 @@ tick: function(organisms, myOrganisms, score) {
 					}
 				}
 
-				while (currentTotalGap > opportunityAngle) {
+				while (currentTotalGap > Math.atan2(myOrganism.size, impulse.distance) * 2) {
 					if (currentOpportunityAngle.length > 1) {
 						currentTotalGap -= currentOpportunityAngle[1].gap;
 						currentTotalThreat -= currentOpportunityAngle[0].threat;
@@ -443,8 +457,9 @@ tick: function(organisms, myOrganisms, score) {
 					}
 				}
 
-				if (currentTotalThreat <= biggestOpportunityAngle) {
+				if (currentTotalThreat < biggestOpportunityAngle) {
 					biggestOpportunityAngle = currentTotalThreat;
+					biggestOpportunity = currentOpportunityAngle;
 					if (currentOpportunityAngle.length > 1) {
 						if (currentOpportunityAngle[0].gap == -1) {
 							moveDirection = sanitizeDegrees(currentOpportunityAngle[0].direction + (360 + currentOpportunityAngle[currentOpportunityAngle.length -1].direction - currentOpportunityAngle[0].direction) / 2);
@@ -460,28 +475,6 @@ tick: function(organisms, myOrganisms, score) {
 
 		moveDistance = myOrganism.organisms.length > 1 ? impulse.distance + 60 : impulse.distance;
 
-		//Only go with the biggest opportunity
-		if (impulse.threat < -1 && opportunity == null) {
-			//TODO rework this to account for multiple opportunities
-			opportunity = impulse;
-
-			//offensive split
-			if (impulse.target.length > 0 &&
-				canBeSplitAttacked(impulse.enemy, impulse.target[0]) &&
-				impulse.worryDistance > impulse.distance &&
-				getAngleDifference(impulse.direction, myOrganism.direction) < 16 &&
-				this.safeSplit &&
-				(myOrganism.organisms.length < 2 ||
-				(myOrganism.organisms.length < 3 && organismState.viruses.length > 2) ||
-				(!this.threatened)) &&
-				impulse.enemy.dx != 0 &&
-				this.attackSplitCooldown < 1 &&
-				(myOrganism.size < 200 || myOrganism.mass / 2 < -opportunity.threat) &&
-				impulse.enemy.name != "BotKnowsBest") {
-				shouldSplit = true;
-			}
-		}
-
 		//defensive split
 		if (myOrganism.organisms.length < 3 &&
 			this.defenseSplitCooldown < 1 &&
@@ -494,18 +487,60 @@ tick: function(organisms, myOrganisms, score) {
 		}
 	}
 
-	//If you can't get 2+ opportunities, then go for the biggest one only
-	if (!isRunning && myOrganism.organisms.length > 1 && gap > opportunityAngle) {
-		moveDirection = opportunity.direction;
+	var opportunity = null;
+
+	if (biggestOpportunityAngle < -1) {
+		var closestCurrentOpportunity = null;
+		var closestDistance = 999999;
+		for (var i=0;i<biggestOpportunity.length;i++) {
+			if (closestDistance < biggestOpportunity[i].distance) {
+				closestCurrentOpportunity = biggestOpportunity[i];
+			}
+		}
+
+		if (closestCurrentOpportunity != null) {
+			opportunity = new Impulse(
+				biggestOpportunityAngle,
+				closestCurrentOpportunity.enemy,
+				closestCurrentOpportunity.target,
+				closestCurrentOpportunity.worryDistance,
+				closestCurrentOpportunity.distance,
+				moveDirection,
+				'Opportunity',
+				'#00FF00'
+			);
+		}
+	} else if (biggestOpportunityAngle == -1) {
+		moveDirection = closestImpulse.direction;
+	}
+
+	//offensive split
+	if (opportunity != null &&
+		opportunity.threat < -1 &&
+		opportunity.target.length > 0 &&
+		canBeSplitAttacked(opportunity.enemy, opportunity.target[0]) &&
+		opportunity.worryDistance > opportunity.distance &&
+		getAngleDifference(opportunity.direction, myOrganism.direction) < 16 &&
+		this.safeSplit &&
+		(myOrganism.organisms.length < 2 ||
+		(myOrganism.organisms.length < 3 && organismState.viruses.length > 2) ||
+		(!this.threatened)) &&
+		opportunity.enemy.dx != 0 &&
+		this.attackSplitCooldown < 1 &&
+		(myOrganism.size < 200 || myOrganism.mass / 2 < -opportunity.threat) &&
+		opportunity.enemy.name != "BotKnowsBest") {
+		shouldSplit = true;
 	}
 
 	//Check to make sure I can split safely
+	//TODO make safeSplit work for defensive splits too
 	if (shouldSplit) {
 		var splitCoords = toCoords(moveDirection, myOrganism.ox, myOrganism.oy, getSplitDistance(myOrganism));
 		for (var i=0; i<organismState.enemies.length; i++) {
 			var currentEnemy = organismState.enemies[i];
 			var currentDistance = distance(currentEnemy, {ox: splitCoords.x, oy: splitCoords.y});
-			if ((canBeEaten(opportunity.target[0], currentEnemy) &&
+			if (opportunity != null &&
+				(canBeEaten(opportunity.target[0], currentEnemy) &&
 				getConsumeDistance(opportunity.target[0], currentEnemy) > currentDistance) ||
 				(canBeSplitEaten(opportunity.target[0], currentEnemy) &&
 				getSplitDistance(currentEnemy) - 80 > currentDistance)) {
