@@ -31,6 +31,8 @@ tick: function(organisms, myOrganisms, score) {
 		this.immediateThreatCooldown--;
 	}
 
+	makeFriends(organismState);
+
 	this.organismState = organismState;
 	this.myOrganism = myOrganism;
 	this.safeSplit = true;
@@ -44,14 +46,14 @@ tick: function(organisms, myOrganisms, score) {
 		this.runCooldown = 2;
 	}
 
-	var runCooldownString = 'Safe Split: ' + (this.safeSplit ? '<span style="color: green;">True</span>' : '<span style="color: red;">False</span>');
-	runCooldownString += ' Threatened: ' + (this.threatened ? '<span style="color: red;">True</span>' : '<span style="color: green;">False</span>');
-	runCooldownString += ' Immediate: ' + (this.immediateThreats ? '<span style="color: red;">True</span>' : '<span style="color: green;">False</span>');
-	runCooldownString += '<br>Enabled: ' + (window.botEnabled ? '<span style="color: green;">True</span>' : '<span style="color: blue;">False</span>');
-	runCooldownString += ' Opportunity: ' + (this.opportunity ? '<span style="color: green;">True</span>' : '<span style="color: blue;">False</span>');
-	runCooldownString += ' Aggressive: ' + (aggressive ? '<span style="color: red;">True</span>' : '<span style="color: green;">False</span>');
-	runCooldownString += '<br>Split: ' + (!dontSplit ? '<span style="color: green;">Enabled</span>' : '<span style="color: red;">Disabled</span>');
-	runCooldownString += ' Cooldown: ' + (!this.shotLastCooldown ? '<span style="color: green;">No</span>' : '<span style="color: red;">Yes</span>');
+	var runCooldownString = 'Safe Split: ' + (this.safeSplit ? '<span style="color: lightgreen;">True</span>' : '<span style="color: indianindianred;">False</span>');
+	runCooldownString += ' Threatened: ' + (this.threatened ? '<span style="color: indianred;">True</span>' : '<span style="color: lightgreen;">False</span>');
+	runCooldownString += ' Immediate: ' + (this.immediateThreats ? '<span style="color: indianred;">True</span>' : '<span style="color: lightgreen;">False</span>');
+	runCooldownString += '<br>Enabled: ' + (window.botEnabled ? '<span style="color: lightgreen;">True</span>' : '<span style="color: dodgerblue;">False</span>');
+	runCooldownString += ' Opportunity: ' + (this.opportunity ? '<span style="color: lightgreen;">True</span>' : '<span style="color: dodgerblue;">False</span>');
+	runCooldownString += ' Aggressive: ' + (aggressive ? '<span style="color: indianred;">True</span>' : '<span style="color: lightgreen;">False</span>');
+	runCooldownString += '<br>Split: ' + (!dontSplit ? '<span style="color: lightgreen;">Enabled</span>' : '<span style="color: indianred;">Disabled</span>');
+	runCooldownString += ' Cooldown: ' + (!this.shotLastCooldown ? '<span style="color: lightgreen;">No</span>' : '<span style="color: indianred;">Yes</span>');
 	runCooldownString += ' (' + this.smartShootCount + ')';
 	$runCooldown.html(runCooldownString);
 
@@ -136,7 +138,7 @@ tick: function(organisms, myOrganisms, score) {
 				impulse.enemy.dx != 0 &&
 				this.attackSplitCooldown < 1 &&
 				myOrganism.size < 1000 &&
-				impulse.enemy.name != "BotKnowsBest") {
+				(!impulse.enemy.name || feedList.indexOf(impulse.enemy.name) == -1)) {
 				shouldSplit = true;
 			}
 		}

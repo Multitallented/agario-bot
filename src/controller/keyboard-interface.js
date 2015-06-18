@@ -54,6 +54,9 @@ function pressW() {
 }
 window.pressW = pressW;
 document.onkeypress = function(e) {
+	if (!keyControls) {
+		return;
+	}
     e = e || window.event;
     if (e.keyCode == 102) { //f
         for (var i = 0; i<7; i++) {

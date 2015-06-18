@@ -43,18 +43,18 @@ function printImpulseLog(impulses, bot) {
 	for (var i = 0; i < impulses.length; i++) {
 		var impulse = impulses[i];
 
-		var currentColor = 'blue';
+		var currentColor = 'dodgerblue';
 		if (impulse.threat > 0) {
-			currentColor = 'red';
+			currentColor = 'indianred';
 		} else {
-			currentColor = 'green';
+			currentColor = 'lightgreen';
 		}
 		miscStatString += "<span style='color:" + currentColor + "'>" + impulse.enemy.name + "(" + Math.floor(impulse.enemy.mass) + ")</span>: ";
 
 		if (impulse.distance < impulse.worryDistance) {
-			currentColor = 'red';
+			currentColor = 'indianred';
 		} else {
-			currentColor = 'green';
+			currentColor = 'lightgreen';
 		}
 		miscStatString += 'dir:' + Math.floor(impulse.direction) + ', <span style="color:' +
 			currentColor + ';">' + Math.floor(impulse.distance) + '</span>(' + Math.floor(impulse.worryDistance) +

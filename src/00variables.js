@@ -10,4 +10,16 @@ window.botEnabled = true;
 window.botOverride = false;
 var friendList = [];
 var enemyList = [];
-var feedList = [];
+var feedList = [ "BotKnowsBest" ];
+var keyControls = true;
+
+Array.prototype.remove = function() {
+	var what, a = arguments, L = a.length, ax;
+	while (L && this.length) {
+		what = a[--L];
+		while ((ax = this.indexOf(what)) !== -1) {
+			this.splice(ax, 1);
+		}
+	}
+	return this;
+};

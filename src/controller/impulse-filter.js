@@ -89,7 +89,12 @@ function impulseFilter(bot, myOrganism, organismState) {
 	for (var i=0; i< bot.impulses.length; i++) {
 		var impulse = bot.impulses[i];
 
-		if (impulse.enemy.name == "BotKnowsBest") {
+		//Feed people on feeder list
+		if (impulse.enemy.name && feedList.indexOf(impulse.enemy.name) > -1) {
+			if (impulse.threat < 1) {
+				continue;
+			}
+
 			if (!bot.immediateThreats || i == 0) {
 				tempArray = [];
 				impulse.threat = -999999;
@@ -97,6 +102,16 @@ function impulseFilter(bot, myOrganism, organismState) {
 				break;
 			} else {
 				impulse.threat = -impulse.enemy.mass;
+			}
+		}
+
+		//Don't eat or worry about friends
+		if (impulse.enemy.name && friendList.indexOf(impulse.enemy.name) > -1) {
+			if (impulse.threat < 1) {
+				continue;
+			} else if (impulse.target.length < 1 ||
+				impulse.distance > getConsumeDistance(impulse.target[0], impulse.enemy) * 1.15 + 60) {
+				continue;
 			}
 		}
 

@@ -48,16 +48,57 @@ var chart=new Chart(ctx).Line({labels:labels,datasets:[{
 		data:data2
 	}
 ]});
-var $friendList = $('<div id="friend-list" style="position: fixed; bottom: 0; right: 0;"></div>');
+var $friendList = $('<div id="friend-list" style="position: fixed; bottom: 0; right: 0;"><p></p></div>');
 $body.append($friendList);
 
-var $addFriendButton = $('<form id="add-friend"><input type="text" placeholder="Add Friend" /></form>');
-$friendList.append($addFriendButton);
-$addFriendButton.submit(function(e) {
+var $addForm = $('<form id="add-friend"><input type="text" placeholder="Add Friend" /></form>');
+$friendList.append($addForm);
+var $addTextField = $addForm.find('input');
+$addTextField.focus(function() {
+	keyControls = false;
+});
+$addTextField.blur(function() {
+	keyControls = true;
+	$addTextField.val('');
+});
+$addForm.submit(function(e) {
 	e.preventDefault();
-	//TODO add people to friend, feed, or enemy list
+	var inputString = $addTextField.val();
+	if (inputString.indexOf('fr:') > -1) { //friend
+		friendList.push(inputString.replace('fr:', ''));
+	} else if (inputString.indexOf('fe:') > -1) { //feed
+		feedList.push(inputString.replace('fe:', ''));
+	} else { //enemy
+		enemyList.push(inputString);
+	}
+	$addTextField.val('');
+	updateList();
 	return false;
 });
+
+function updateList() {
+	var listString = '';
+	for (var i=0; i<friendList.length; i++) {
+		listString += '<a href="#" style="color: lightgreen;">' + friendList[i] + '</a><br>';
+	}
+	for (var i=0; i<enemyList.length; i++) {
+		listString += '<a href="#" style="color: indianred;">' + enemyList[i] + '</a><br>';
+	}
+	for (var i=0; i<feedList.length; i++) {
+		listString += '<a href="#" style="color: dodgerblue;">' + feedList[i] + '</a><br>';
+	}
+	$('#friend-list p').html(listString);
+	$('#friend-list p a').click(function() {
+		removeFromLists($(this).text());
+		updateList();
+	})
+}
+
+function removeFromLists(name) {
+	friendList.remove(name);
+	feedList.remove(name);
+	enemyList.remove(name);
+}
 
 var $statContainer = $('<div id="stat-container"></div>');
 $body.append($statContainer);
