@@ -255,9 +255,9 @@ tick: function(organisms, myOrganisms, score) {
 		}
 
 		//ignore minor threats/opportunities
-		/*if (isRunning && !this.opportunity && tempArray.length > 0 && biggestImpulse > 1 && Math.abs(impulse.threat * 2) < biggestImpulse) {
+		if (isRunning && !this.opportunity && tempArray.length > 0 && biggestImpulse > 1 && Math.abs(impulse.threat * 2) < biggestImpulse) {
 			continue;
-		}*/
+		}
 
 		//ignore threats that are farther away
 		if (!isEnemyVirus &&
@@ -292,6 +292,27 @@ tick: function(organisms, myOrganisms, score) {
 			continue;
 		}
 
+		//Don't go for targets that are already threatened
+		if (!isRunning && impulse.threat < 0) {
+			var tooRisky = false;
+			for (var j=0; j<organismState.enemies.length; j++) {
+				if (tooRisky) {
+					break;
+				}
+				var currentEnemy = organismState.enemies[j];
+				for (var k=0; k<myOrganism.organisms.length; k++) {
+					var currentFriendly = myOrganism.organisms[k];
+					if (canBeEaten(currentFriendly, currentEnemy) && !tooBigToWorry(myOrganism, currentEnemy) &&
+						(getConsumeDistance(currentFriendly, currentEnemy) > impulse.distance ||
+						(canBeSplitEaten(currentFriendly, currentEnemy) &&
+						getSplitDistance(currentEnemy) > impulse.direction))) {
+						tooRisky = true;
+						break;
+					}
+				}
+			}
+		}
+
 		if (!isEnemyVirus &&
 			impulse.threat < 1 &&
 			(isRunning &&
@@ -301,13 +322,19 @@ tick: function(organisms, myOrganisms, score) {
 			continue;
 		}
 
-		/*//if threatened and running, skip opportunities
+		//if threatened and running, skip opportunities
 		if ((!aggressive || this.immediateThreats) && !isEnemyVirus && isRunning && impulse.threat < 1) {
 			continue;
-		}*/
+		}
 
 		//don't chase people you can't catch
-		if (!aggressive && !isEnemyVirus && this.opportunity && !isRunning && impulse.threat < -1 && impulse.enemy.dx != 0 && impulse.worryDistance + 100 < impulse.distance) {
+		if (!aggressive &&
+			!isEnemyVirus &&
+			this.opportunity &&
+			!isRunning &&
+			impulse.threat < -1 &&
+			impulse.enemy.dx != 0 &&
+			impulse.worryDistance + 100 < impulse.distance) {
 			continue;
 		}
 
@@ -418,7 +445,18 @@ tick: function(organisms, myOrganisms, score) {
 		}
 	}
 
-	//TODO adjust for multiple opportunities
+	//Check to make sure I can split safely
+	if (shouldSplit) {
+		var splitCoords = toCoords(moveDirection, myOrganism.ox, myOrganism.oy, getSplitDistance(myOrganism));
+		for (var i=0; i<organismState.enemies.length; i++) {
+			var currentEnemy = organismState.enemies[i];
+			var currentDistance = distance(currentEnemy, {ox: splitCoords.x, oy: splitCoords.y});
+			//TODO get this working
+			if (false) {
+				shouldSplit = false;
+			}
+		}
+	}
 
 	if (this.impulses.length != 0 && this.impulses[0].threat > 0) {
 		moveDistance = 400;
@@ -460,7 +498,7 @@ tick: function(organisms, myOrganisms, score) {
 			setTimeout(function() {
 				window.ai.moveCoords = toCoords(moveDirection, myOrganism.ox, myOrganism.oy, 400);
 				window.ai.move(window.ai.moveCoords.x, window.ai.moveCoords.y);
-			}, i * 80 + 60);
+			}, i * 80 + 50);
 		}
 		for (var i=0; i<this.smartShootCount; i++) {
 			setTimeout(pressW, i * 80);
@@ -469,7 +507,7 @@ tick: function(organisms, myOrganisms, score) {
 			setTimeout(function() {
 				window.ai.moveCoords = toCoords(sanitizeDegrees(180 + moveDirection), myOrganism.ox, myOrganism.oy, 400);
 				window.ai.move(window.ai.moveCoords.x, window.ai.moveCoords.y);
-			}, i * 80 + 20);
+			}, i * 80 + 10);
 		}
 		setTimeout(function() {
 			window.ai.shotLastCooldown = false;

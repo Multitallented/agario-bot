@@ -19,11 +19,12 @@ function updateBehaviorChart(impulses, theBehaviorChart) {
 	theBehaviorChart.update();
 }
 //Map is 11200x11200
+$body = $('body');
 Chart.defaults.Line.pointDot=false
 Chart.defaults.Line.showScale=false
 Chart.defaults.global.responsive=false
 var canvas=$('<canvas id="score-history-chart" width="200" height="200" style="position:fixed"></canvas>')
-$('body').append(canvas);
+$body.append(canvas);
 var ctx=canvas.get(0).getContext("2d")
 var labels=[],
 	data1=[],
@@ -47,8 +48,19 @@ var chart=new Chart(ctx).Line({labels:labels,datasets:[{
 		data:data2
 	}
 ]});
+var $friendList = $('<div id="friend-list" style="position: fixed; bottom: 0; right: 0;"></div>');
+$body.append($friendList);
+
+var $addFriendButton = $('<form id="add-friend"><input type="text" placeholder="Add Friend" /></form>');
+$friendList.append($addFriendButton);
+$addFriendButton.submit(function(e) {
+	e.preventDefault();
+	//TODO add people to friend, feed, or enemy list
+	return false;
+});
+
 var $statContainer = $('<div id="stat-container"></div>');
-$('body').append($statContainer);
+$body.append($statContainer);
 $statContainer.css('position','fixed');
 $statContainer.css('top', '220px');
 $statContainer.css('color', 'white');
@@ -72,7 +84,7 @@ $statContainer.append($miscStat);
 $miscStat.css('float', 'left');
 
 var behaviorCanvas=$('<div id="behavior-container" style="position:fixed;width:100%;bottom:5px;text-align:center"><h4 id="behavior-char-title">Bot Behavior</h4><canvas id="behavior-canvas" width="250" height="100"></canvas></div>')
-$('body').append(behaviorCanvas);
+$body.append(behaviorCanvas);
 $("#behavior-container").css('pointer-events', 'none');
 
 var behaviorCtx=$('#behavior-canvas').get(0).getContext("2d");

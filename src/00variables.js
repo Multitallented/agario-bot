@@ -8,3 +8,6 @@ var smartShoot = false;
 var dontSplit = false;
 window.botEnabled = true;
 window.botOverride = false;
+var friendList = [];
+var enemyList = [];
+var feedList = [];

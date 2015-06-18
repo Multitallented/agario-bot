@@ -112,6 +112,9 @@ function gatherImpulses(organismState, myOrganism, bot) {
 			if (myOrganism.mass < 51) {
 				worryDistance += 20;
 			}
+			if (myOrganism.mass < 100) {
+				worryDistance += 20;
+			}
 
 			if (worryDistance > closestDistance) {
 				bot.immediateThreats = true;
@@ -257,6 +260,8 @@ function gatherImpulses(organismState, myOrganism, bot) {
 			));
 		}
 	}
+
+	//TODO combine multiple opportunities I can eat
 
 	return impulses;
 }
