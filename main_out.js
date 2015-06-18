@@ -362,6 +362,9 @@ $('#canvas').after($('#canvas').clone().attr('id','canvas-2')).remove();
 	}
 
 	function registerEvent(a) {
+		if (!keyControls && (a == 17 || a == 21)) {
+			return;
+		}
 		if (sa()) {
 			var b = new ArrayBuffer(1);
 			(new DataView(b)).setUint8(0, a);

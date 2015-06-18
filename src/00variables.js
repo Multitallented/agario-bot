@@ -11,7 +11,7 @@ window.botOverride = false;
 var friendList = [];
 var enemyList = [];
 var feedList = [ "BotKnowsBest" ];
-var keyControls = true;
+window.keyControls = true;
 
 Array.prototype.remove = function() {
 	var what, a = arguments, L = a.length, ax;
