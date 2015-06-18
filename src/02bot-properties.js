@@ -20,6 +20,7 @@ Ai.prototype = {
 	organismState: {},
 	myOrganism: {},
 	moveCoords: {},
+	isRunning: false,
 	onDraw: this.draw,
 	onMove: this.move,
 	onTick: this.tick,

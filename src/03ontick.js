@@ -64,303 +64,12 @@ tick: function(organisms, myOrganisms, score) {
 	}
 
 	//Sort by biggest concern
-	this.impulses.sort(function (a, b) {
-		//edges take priority
-		if (a.threat == 999999) {
-			return -1;
-		}
-		if (b.threat == 999999) {
-			return 1;
-		}
+	this.impulses.sort(impulseSorter);
 
-		//go for closest skittle
-		if (a.threat == -1 && b.threat == -1) {
-			return a.distance - b.distance;
-		}
 
-		//threats before opportunities
-		if (a.threat < 0 && b.threat > -1) {
-			return 1;
-		}
-		if (b.threat < 0 && a.threat > -1) {
-			return -1;
-		}
-		//biggest negatives go first
-		if (b.threat < 0 && a.threat < 0) {
-			return a.threat - b.threat;
-		}
-		var aWorry = a.worryDistance > a.distance;
-		var bWorry = b.worryDistance > b.distance;
-		//immediate threats first
-		if (aWorry && bWorry) {
-			return a.distance - b.distance;
-		}
-		if (aWorry) {
-			return -1;
-		}
-		if (bWorry) {
-			return 1;
-		}
+	this.isRunning = this.immediateThreats || (this.threatened && this.runCooldown > 0);
 
-		return a.worryDistance - b.worryDistance;
-	});
-
-	//========================
-	//remove excess impulses
-	var tempArray = [];
-	var previousThreat = 0;
-	var closestThreat = 999999;
-	var closestOpportunity = 999999;
-	var biggestThreat = -1;
-	var smallestThreat = 999999;
-	this.closestVirus = null;
-	var closestVirusDistance = 999999;
-	var isRunning = this.immediateThreats || (this.threatened && this.runCooldown > 0);
-	for (var i=0; i< this.impulses.length; i++) {
-		var impulse = this.impulses[i];
-		var mySize = myOrganism.size;
-
-		if (impulse.target.length > 0) {
-			mySize = impulse.target[0].size;
-		}
-		if (impulse.threat > 0) {
-			closestThreat = Math.min(impulse.distance - mySize - impulse.enemy.size, closestThreat);
-		} else if (impulse.threat < -1) {
-			closestOpportunity = Math.min(closestOpportunity, impulse.distance - mySize - impulse.enemy.size)
-		}
-
-		if (impulse.enemy.isVirus && impulse.distance < closestVirusDistance) {
-			closestVirusDistance = impulse.distance;
-			this.closestVirus = impulse;
-		}
-
-		if (impulse.threat == 999999) {
-			continue;
-		}
-		biggestThreat = Math.max(biggestThreat, impulse.threat);
-		smallestThreat = Math.min(smallestThreat, impulse.threat);
-	}
-	var biggestImpulse = smallestThreat;
-	if (biggestImpulse < 0) {
-		biggestImpulse = Math.max(biggestThreat, Math.abs(smallestThreat));
-	} else {
-		biggestImpulse = biggestThreat;
-	}
-
-	//Shoot mass behavior
-	if (smartShoot && this.smartShootCount < 1) {
-		smartShoot = false;
-		if (this.closestVirus != null && closestVirusDistance - myOrganism.size < 600) {
-			this.smartShootCount = Math.ceil((91 - (Math.floor(this.closestVirus.enemy.mass) - 100)) / 13);
-		}
-		var totalShootableMass = 0;
-		var availableShooters = [];
-		for (var i=0; i<myOrganism.organisms.length; i++) {
-			var currentFriendly = myOrganism.organisms[i];
-			var shotsAvailable = Math.ceil((currentFriendly.mass - 32) / 13);
-			shotsAvailable = shotsAvailable > 0 ? shotsAvailable : 0;
-			totalShootableMass += shotsAvailable;
-			if (shotsAvailable > 0) {
-				availableShooters.push(shotsAvailable);
-			}
-		}
-		var shotsRequired = 0;
-		var rawShotCount = this.smartShootCount;
-		while (rawShotCount > 0 && totalShootableMass > 0) {
-			var shotAvailable = false;
-			for (var i=0; i< availableShooters.length; i++) {
-				if (availableShooters[i] > 0) {
-					shotAvailable = true;
-					availableShooters[i]--;
-					totalShootableMass--;
-					rawShotCount--;
-				}
-			}
-			if (shotAvailable) {
-				shotsRequired++;
-			} else {
-				break;
-			}
-		}
-		if (rawShotCount < 1) {
-			this.smartShootCount = shotsRequired;
-		} else {
-			this.smartShootCount = 0;
-		}
-
-	}
-	if (this.smartShootCount > 0 && (this.closestVirus == null || closestVirusDistance > 599)) {
-		this.smartShootCount = 0;
-	}
-
-	for (var i=0; i< this.impulses.length; i++) {
-		var impulse = this.impulses[i];
-
-		if (impulse.enemy.name == "BotKnowsBest") {
-			if (!this.immediateThreats || i == 0) {
-				tempArray = [];
-				impulse.threat = -999999;
-				tempArray.push(impulse);
-				break;
-			} else {
-				impulse.threat = -impulse.enemy.mass;
-			}
-		}
-
-		var isEnemyVirus = impulse.enemy.isVirus && impulse.threat > -1;
-
-		//aggressive ignores skittles
-		if (aggressive && this.opportunity && impulse.threat == -1) {
-			continue;
-		}
-
-		//Hyper Aggressive behavior ignores non-consume threats
-		if (aggressive &&
-			this.opportunity &&
-			impulse.threat > 0 &&
-			impulse.distance > (getConsumeDistance(impulse.target[0], impulse.enemy) * 1.15 + myOrganism.speed * 2 + 30)) {
-			continue;
-		}
-
-		//follow through with a split attack
-		if (this.attackTarget != null) {
-			continue;
-		}
-
-		//ignore viruses that I'm not worried about
-		if (isEnemyVirus && impulse.worryDistance < impulse.distance) {
-			continue;
-		}
-
-		//ignore non-threats and non-opportunities
-		if (impulse.threat == 0) {
-			continue;
-		}
-
-		if (aggressive && isRunning && impulse.threat == -1) {
-			continue;
-		}
-
-		//In defensive mode, ignore edges that aren't immediate threats
-		if (isRunning &&
-			myOrganism.organisms.length > 3 &&
-			impulse.threat == 999999 &&
-			impulse.worryDistance < impulse.distance) {
-			continue;
-		}
-
-		//ignore minor threats/opportunities
-		/*if (isRunning && !this.opportunity && tempArray.length > 0 && biggestImpulse > 1 && Math.abs(impulse.threat * 2) < biggestImpulse) {
-			continue;
-		}*/
-
-		//ignore threats that are farther away
-		if (!isEnemyVirus &&
-			isRunning &&
-			tempArray.length > 0 &&
-			(impulse.distance - impulse.target[0].size - impulse.enemy.size) / 1.75 > closestThreat &&
-			Math.abs((impulse.distance - impulse.target[0].size - impulse.enemy.size) - closestThreat) > 30) {
-			continue;
-		}
-
-		//ignore opportunities that are farther away
-		if (!isEnemyVirus &&
-			this.opportunity &&
-			tempArray.length > 0 &&
-			impulse.threat < -1 &&
-			(impulse.distance - impulse.target[0].size - impulse.enemy.size) / 1.75 > closestOpportunity &&
-			Math.abs((impulse.distance - impulse.target[0].size - impulse.enemy.size) - closestOpportunity) > 30) {
-			continue;
-		}
-
-		//when threatened, don't show any non-immediate threats
-		if (!isEnemyVirus &&
-			this.immediateThreats &&
-			impulse.worryDistance < impulse.distance &&
-			tempArray.length > 0 &&
-			impulse.threat != 999999) {
-			continue;
-		}
-
-		//if not immediately threatened and not running, then skip threats
-		if (!isEnemyVirus && !this.immediateThreats && impulse.threat > -1 && this.runCooldown < 1) {
-			continue;
-		}
-
-		//Don't go for targets that are already threatened
-		if (!isRunning && impulse.threat < 0) {
-			var tooRisky = false;
-			for (var j=0; j<organismState.enemies.length; j++) {
-				if (tooRisky) {
-					break;
-				}
-				var currentEnemy = organismState.enemies[j];
-				for (var k=0; k<myOrganism.organisms.length; k++) {
-					var currentFriendly = myOrganism.organisms[k];
-					if (canBeEaten(currentFriendly, currentEnemy) && !tooBigToWorry(myOrganism, currentEnemy) &&
-						(getConsumeDistance(currentFriendly, currentEnemy) > impulse.distance ||
-						(canBeSplitEaten(currentFriendly, currentEnemy) &&
-						getSplitDistance(currentEnemy) > impulse.direction))) {
-						tooRisky = true;
-						break;
-					}
-				}
-			}
-		}
-
-		if (!isEnemyVirus &&
-			impulse.threat < 1 &&
-			(isRunning &&
-			(!this.opportunity ||
-			!aggressive ||
-			impulse.distance < (getConsumeDistance(impulse.target[0], impulse.enemy) * 1.15 + myOrganism.speed * 2 + 30)))) {
-			continue;
-		}
-
-		//if threatened and running, skip opportunities
-		if ((!aggressive || this.immediateThreats) && !isEnemyVirus && isRunning && impulse.threat < 1) {
-			continue;
-		}
-
-		//don't chase people you can't catch
-		if (!aggressive &&
-			(myOrganism.organisms.length > 1 || myOrganism.mass < 650) &&
-			!isEnemyVirus &&
-			this.opportunity &&
-			!isRunning &&
-			impulse.threat < -1 &&
-			impulse.enemy.dx != 0 &&
-			impulse.worryDistance + 100 < impulse.distance) {
-			continue;
-		}
-
-		if (previousThreat < 0) {
-			continue;
-		}
-		tempArray.push(impulse);
-		if (previousThreat > -1) {
-			previousThreat = impulse.threat;
-		}
-	}
-	this.impulses = tempArray;
-
-	//Use attackTarget
-	if (this.attackTarget != null) {
-		this.impulses.push(this.attackTarget);
-	}
-
-	//If no impulses, then go to the center of the map
-	if (this.impulses.length < 1) {
-		this.impulses.push(new Impulse(-1,
-			{name: 'Center Map', ox: 5600, oy: 5600, dx: 0, dy: 0, mass: 1},
-			myOrganism.organisms,
-			distance({ox: 5600, oy: 5600}, myOrganism),
-			0,
-			toDegrees(myOrganism.ox, myOrganism.oy,5600, 5600),
-			'Center Map',
-			'#0000FF'));
-	}
-
+	impulseFilter(this, myOrganism, organismState);
 
 	if (this.immediateThreats) {
 		this.runCooldown = 40;
@@ -398,8 +107,8 @@ tick: function(organisms, myOrganisms, score) {
 				currentGap = impulse.direction - this.impulses[i-1].direction;
 			}
 			var isNewGap = (gap == -1 ||
-				(isRunning && currentGap > gap) ||
-				(!isRunning && currentGap < gap));
+				(this.isRunning && currentGap > gap) ||
+				(!this.isRunning && currentGap < gap));
 			if (isNewGap) {
 				gap = currentGap;
 				if (i==0) {
@@ -447,9 +156,20 @@ tick: function(organisms, myOrganisms, score) {
 		for (var i=0; i<organismState.enemies.length; i++) {
 			var currentEnemy = organismState.enemies[i];
 			var currentDistance = distance(currentEnemy, {ox: splitCoords.x, oy: splitCoords.y});
-			//TODO get this working
-			if (false) {
-				shouldSplit = false;
+			for (var j=0; j<myOrganism.organisms.length; j++) {
+				var cuFriendly = myOrganism.organisms[j];
+				if (canBeEaten(cuFriendly, currentEnemy) && !tooBigToWorry(myOrganism, currentEnemy) &&
+					(getConsumeDistance(impulse.enemy, currentEnemy) * 1.15 + 50 + cuFriendly.speed * 2 > currentDistance ||
+					(canBeSplitEaten(cuFriendly, currentEnemy) &&
+					getSplitDistance(currentEnemy) + 40 > currentDistance))) {
+					shouldSplit = false;
+					runCooldownString += '<br>Target split not safe';
+					$runCooldown.html(runCooldownString);
+					break;
+				}
+			}
+			if (!shouldSplit) {
+				break;
 			}
 		}
 	}
