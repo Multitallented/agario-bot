@@ -11,11 +11,6 @@ tick: function(organisms, myOrganisms, score) {
 	var organismState = new OrganismState(myOrganisms, organisms);
 
 	var myOrganism = new MyOrganism(myOrganisms);
-	if (runOnce) {
-		console.log(organismState);
-		console.log(myOrganism);
-		runOnce = false;
-	}
 
 	$massStat.text('Size: ' + Math.floor(myOrganism.size) + ':' + Math.floor(myOrganism.mass) + '(x' + Math.floor(myOrganism.ox) + ',y' + Math.floor(myOrganism.oy) + ')');
 	$dodgeStat.text('Speed: (' + Math.floor(myOrganism.direction) + ')' + Math.floor(myOrganism.speed) + ' { ' + Math.floor(myOrganism.dx) + ' , ' + Math.floor(myOrganism.dy) + ' }');
@@ -255,9 +250,9 @@ tick: function(organisms, myOrganisms, score) {
 		}
 
 		//ignore minor threats/opportunities
-		if (isRunning && !this.opportunity && tempArray.length > 0 && biggestImpulse > 1 && Math.abs(impulse.threat * 2) < biggestImpulse) {
+		/*if (isRunning && !this.opportunity && tempArray.length > 0 && biggestImpulse > 1 && Math.abs(impulse.threat * 2) < biggestImpulse) {
 			continue;
-		}
+		}*/
 
 		//ignore threats that are farther away
 		if (!isEnemyVirus &&
@@ -329,6 +324,7 @@ tick: function(organisms, myOrganisms, score) {
 
 		//don't chase people you can't catch
 		if (!aggressive &&
+			(myOrganism.organisms.length > 1 || myOrganism.mass < 650) &&
 			!isEnemyVirus &&
 			this.opportunity &&
 			!isRunning &&
@@ -469,6 +465,7 @@ tick: function(organisms, myOrganisms, score) {
 		moveCoords = toCoords(moveDirection, myOrganism.ox, myOrganism.oy, moveDistance);
 	}
 
+	//account for momentum if chasing someone
 	if (this.opportunity && opportunity != null) {
 		moveCoords.x += opportunity.enemy.dx * 5;
 		moveCoords.y += opportunity.enemy.dy * 5;

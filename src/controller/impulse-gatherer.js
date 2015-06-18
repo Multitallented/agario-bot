@@ -126,10 +126,6 @@ function gatherImpulses(organismState, myOrganism, bot) {
 			return a.distance - b.distance;
 		});
 
-		if (threat > 0 && myOrganism.mass < 51) {
-			worryDistance += 20;
-		}
-
 		//Always create new impulse
 		var newImpulse = new Impulse(
 			threat,
