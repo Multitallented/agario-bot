@@ -9,6 +9,7 @@ function impulseFilter(bot, myOrganism, organismState) {
 	var smallestThreat = 999999;
 	bot.closestVirus = null;
 	var closestVirusDistance = 999999;
+	var chaseImpulse = null;
 	for (var i=0; i< bot.impulses.length; i++) {
 		var impulse = bot.impulses[i];
 		var mySize = myOrganism.size;
@@ -32,6 +33,10 @@ function impulseFilter(bot, myOrganism, organismState) {
 		}
 		biggestThreat = Math.max(biggestThreat, impulse.threat);
 		smallestThreat = Math.min(smallestThreat, impulse.threat);
+
+		if (impulse.threat < -1 && impulse.enemy.name && chaseList.indexOf(impulse.enemy.name) > -1) {
+			chaseImpulse = impulse;
+		}
 	}
 	var biggestImpulse = smallestThreat;
 	if (biggestImpulse < 0) {
@@ -89,13 +94,20 @@ function impulseFilter(bot, myOrganism, organismState) {
 	for (var i=0; i< bot.impulses.length; i++) {
 		var impulse = bot.impulses[i];
 
+		//Chasers
+		if (chaseImpulse != null) {
+			tempArray = [];
+			tempArray.push(chaseImpulse);
+			break;
+		}
+
 		//Feed people on feeder list
 		if (impulse.enemy.name && feedList.indexOf(impulse.enemy.name) > -1) {
 			if (impulse.threat < 1) {
 				continue;
 			}
 
-			if (!bot.immediateThreats || i == 0) {
+			if (!bot.immediateThreats || (i == 0 && impulse.enemy.mass < 299)) {
 				tempArray = [];
 				impulse.threat = -999999;
 				tempArray.push(impulse);
@@ -111,7 +123,7 @@ function impulseFilter(bot, myOrganism, organismState) {
 				continue;
 			} else if (impulse.target.length < 1 ||
 				impulse.distance > getConsumeDistance(impulse.target[0], impulse.enemy) * 1.15 + 60) {
-				continue;
+				impulse.threat = -2;
 			}
 		}
 
@@ -236,9 +248,9 @@ function impulseFilter(bot, myOrganism, organismState) {
 				for (var k=0; k<myOrganism.organisms.length; k++) {
 					var cFriendly = myOrganism.organisms[k];
 					if (canBeEaten(cFriendly, cEnemy) && !tooBigToWorry(myOrganism, cEnemy) &&
-						(getConsumeDistance(impulse.enemy, cEnemy) * 1.15 + 50 + cFriendly.speed * 2 > cDistance ||
+						(getConsumeDistance(impulse.enemy, cEnemy) * 1.15 + 80 + cFriendly.speed * 2 > cDistance ||
 						(canBeSplitEaten(cFriendly, cEnemy) &&
-						getSplitDistance(cEnemy) + 40 > cDistance))) {
+						getSplitDistance(cEnemy) + 80 > cDistance))) {
 						tooRisky = true;
 						break;
 					}

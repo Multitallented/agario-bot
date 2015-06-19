@@ -68,6 +68,8 @@ $addForm.submit(function(e) {
 		friendList.push(inputString.replace('fr:', ''));
 	} else if (inputString.indexOf('fe:') > -1) { //feed
 		feedList.push(inputString.replace('fe:', ''));
+	} else if (inputString.indexOf('ch:') > -1) { //chase
+		chaseList.push(inputString.replace('ch:', ''));
 	} else { //enemy
 		enemyList.push(inputString);
 	}
@@ -87,12 +89,16 @@ function updateList() {
 	for (var i=0; i<feedList.length; i++) {
 		listString += '<a href="#" style="color: dodgerblue;">' + feedList[i] + '</a><br>';
 	}
+	for (var i=0; i<chaseList.length; i++) {
+		listString += '<a href="#" style="color: red;">' + chaseList[i] + '</a><br>';
+	}
 	$('#friend-list p').html(listString);
 	$('#friend-list p a').click(function() {
 		removeFromLists($(this).text());
 		updateList();
 	})
 }
+updateList();
 
 function removeFromLists(name) {
 	friendList.remove(name);
