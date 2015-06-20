@@ -16,10 +16,10 @@ var OrganismState = function(myOrganisms, organisms) {
 		organism.speed = getSpeed(organism);
 	}
 	var skittles = this.skittles = this.otherOrganisms.filter(function(organism) {
-		if (organism.mass < 3) {
+		if (organism.mass < 9) {
 			organism.name = "skittle";
 		}
-		return organism.mass < 3;
+		return organism.mass < 9;
 	});
 	this.viruses = this.otherOrganisms.filter(function(organism) {
 		if (organism.isVirus) {
@@ -28,7 +28,7 @@ var OrganismState = function(myOrganisms, organisms) {
 		return organism.isVirus;
 	});
 	this.enemies = this.otherOrganisms.filter(function(organism) {
-		return !organism.isVirus && organism.mass > 3;
+		return !organism.isVirus && organism.mass > 9;
 	});
 	this.organisms = organisms;
 };
