@@ -30,6 +30,10 @@ tick: function(organisms, myOrganisms, score) {
 	if (this.immediateThreatCooldown > 0) {
 		this.immediateThreatCooldown--;
 	}
+	if (this.smartShootCount < 1 && this.shotLastCooldown) {
+		this.shotLastCooldown = false;
+		window.shootWarmup = 3;
+	}
 
 	makeFriends(organismState);
 
@@ -177,18 +181,20 @@ tick: function(organisms, myOrganisms, score) {
 	}
 
 	if (this.impulses.length != 0 && this.impulses[0].threat > 0) {
-		moveDistance = 400;
+		moveDistance = 700;
 	}
 
 	var moveCoords = null;
-	if (this.smartShootCount > 0) {
-		moveCoords = toCoords(this.closestVirus.direction,myOrganism.ox, myOrganism.oy,10);
+	if (this.smartShootCount > 0 || this.shotLastCooldown) {
+		moveCoords = toCoords(this.closestVirus.direction,window.innerWidth / 2, window.innerHeight / 2,15);
+		moveCoords.x = Math.floor(moveCoords.x);
+		moveCoords.y = Math.floor(moveCoords.y);
 	} else {
 		moveCoords = toCoords(moveDirection, myOrganism.ox, myOrganism.oy, moveDistance);
 	}
 
 	//account for momentum if chasing someone
-	if (this.opportunity && opportunity != null) {
+	if (this.opportunity && opportunity != null && this.smartShootCount < 1 && !this.shotLastCooldown) {
 		moveCoords.x += opportunity.enemy.dx * 5;
 		moveCoords.y += opportunity.enemy.dy * 5;
 
@@ -198,7 +204,23 @@ tick: function(organisms, myOrganisms, score) {
 		}
 	}
 	this.moveCoords = moveCoords;
-	window.botOverride = (this.shotLastCooldown || this.defenseSplitCooldown > 0 || (shouldSplit && this.impulses[0].threat > 0));
+
+	//async shoot
+	if (this.smartShootCount > 0 && !this.shotLastCooldown) {
+		this.shotLastCooldown = true;
+
+		/*if (!window.dontShoot) {
+			for (var i = 0; i < this.smartShootCount; i++) {
+				setTimeout(pressW, i * 80 + 40);
+			}
+		}*/
+		//setTimeout(function() {
+		//	window.ai.shotLastCooldown = false;
+		//}, this.smartShootCount * 80 + 41);
+		//this.smartShootCount = 0;
+	}
+
+	window.botOverride = (this.defenseSplitCooldown > 0 || (shouldSplit && this.impulses[0].threat > 0));
 	if ((window.botEnabled || window.botOverride) && !this.shotLastCooldown) {
 		this.move(moveCoords.x, moveCoords.y);
 		if (shouldSplit && this.smartShootCount < 1 && !dontSplit) {
@@ -209,28 +231,5 @@ tick: function(organisms, myOrganisms, score) {
 			this.attackSplitCooldown = 40;
 			this.defenseSplitCooldown = 20;
 		}
-	}
-	//async shoot
-	if (this.smartShootCount > 0 && !this.shotLastCooldown) {
-		this.shotLastCooldown = true;
-		for (var i=0; i<this.smartShootCount - 1; i++) {
-			setTimeout(function() {
-				window.ai.moveCoords = toCoords(moveDirection, myOrganism.ox, myOrganism.oy, 400);
-				window.ai.move(window.ai.moveCoords.x, window.ai.moveCoords.y);
-			}, i * 80 + 50);
-		}
-		for (var i=0; i<this.smartShootCount; i++) {
-			setTimeout(pressW, i * 80);
-		}
-		for (var i=0; i<this.smartShootCount; i++) {
-			setTimeout(function() {
-				window.ai.moveCoords = toCoords(sanitizeDegrees(180 + moveDirection), myOrganism.ox, myOrganism.oy, 400);
-				window.ai.move(window.ai.moveCoords.x, window.ai.moveCoords.y);
-			}, i * 80 + 10);
-		}
-		setTimeout(function() {
-			window.ai.shotLastCooldown = false;
-		}, this.smartShootCount * 80 + 21);
-		this.smartShootCount = 0;
 	}
 },

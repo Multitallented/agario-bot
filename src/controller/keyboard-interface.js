@@ -66,6 +66,7 @@ document.onkeypress = function(e) {
         window.botEnabled = !window.botEnabled;
     } else if (e.keyCode == 104) { //h
         runOnce = true;
+        window.dontShoot = !window.dontShoot;
     } else if (e.keyCode == 100) { //d
 	    if (aggressive) {
 		    aggressive = false;

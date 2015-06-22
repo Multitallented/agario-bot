@@ -21,9 +21,11 @@
             emit()
         };
         C.onmousemove = function(a) {
-            U = a.clientX;
-            V = a.clientY;
-            triggerObjectAt()
+            if (!ai.shotLastCooldown) {
+                U = a.clientX;
+                V = a.clientY;
+                triggerObjectAt();
+            }
         };
         C.onmouseup = function() {};
         /firefox/i.test(navigator.userAgent) ? document.addEventListener("DOMMouseScroll", Aa, !1) : document.body.onmousewheel = Aa;
@@ -48,8 +50,26 @@
         self.onresize = onResize;
         self.requestAnimationFrame ? self.requestAnimationFrame(anim) : setInterval(draw, 1E3 / 60);
         setInterval(function() {
-            if (!window.botEnabled && !window.botOverride) {
+            if ((!window.botEnabled && !window.botOverride) || ai.shotLastCooldown) {
+                if (ai.shotLastCooldown && ai.closestVirus != null && ai.closestVirus.enemy != null) {
+                    var mCoords = window.toCoords(ai.closestVirus.enemy.direction, window.innerWidth / 2, window.innerHeight / 2, 30);
+
+                    console.log(mCoords.x + ":" + mCoords.y);
+                    U = mCoords.x;
+                    V = mCoords.y;
+                    triggerObjectAt();
+                }
+
                 emit();
+                if (ai.smartShootCount > 0) {
+                    if (window.shootWarmup < 1) {
+                        registerEvent(21);
+                        c = !0;
+                        ai.smartShootCount--;
+                    } else {
+                        window.shootWarmup--;
+                    }
+                }
             }
         }, 40);
         w && l("#region").val(w);

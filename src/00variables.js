@@ -13,6 +13,8 @@ var enemyList = [];
 var feedList = [ "BotKnowsBest" ];
 var chaseList = [];
 window.keyControls = true;
+window.dontShoot = false;
+window.shootWarmup = 2;
 
 Array.prototype.remove = function() {
 	var what, a = arguments, L = a.length, ax;

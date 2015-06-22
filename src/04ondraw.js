@@ -36,10 +36,19 @@ draw:function(ctx){
 	}
 
 	//Move Direction
-	ctx.beginPath();
-	ctx.strokeStyle = 'dodgerblue';
-	ctx.moveTo(this.myOrganism.ox, this.myOrganism.oy);
-	ctx.lineTo(this.moveCoords.x, this.moveCoords.y);
-	ctx.stroke();
+	if (!this.shotLastCooldown) {
+		ctx.beginPath();
+		ctx.strokeStyle = 'dodgerblue';
+		ctx.moveTo(this.myOrganism.ox, this.myOrganism.oy);
+		ctx.lineTo(this.moveCoords.x, this.moveCoords.y);
+		ctx.stroke();
+	} else {
+		ctx.beginPath();
+		ctx.strokeStyle = 'dodgerblue';
+		ctx.moveTo(this.myOrganism.ox, this.myOrganism.oy);
+		ctx.lineTo(this.myOrganism.ox + this.moveCoords.x - window.innerWidth / 2,
+			this.myOrganism.oy + this.moveCoords.y - window.innerWidth / 2);
+		ctx.stroke();
+	}
 }
 };

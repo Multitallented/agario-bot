@@ -9,7 +9,7 @@ function getAngleDifference(angle1, angle2) {
 	return difference > 180 ? 360 - difference : difference;
 }
 function tooBigToWorry(food, eater) {
-	return food.mass * 6 < eater.mass && (!eater.name || enemyList.indexOf(eater.name) == -1);
+	return food.mass * 6 < eater.mass && (!eater.name || (enemyList.length > 0 && enemyList.indexOf(eater.name) == -1));
 }
 function getMass(size) {
 	return Math.pow(size, 2) / 100;
@@ -64,6 +64,7 @@ function toDegrees(baseX,baseY, x2, y2) {
 	var rad = Math.atan2(deltaY, deltaX); // In radians
 	return sanitizeDegrees(rad * (180 / Math.PI));
 }
+window.toCoords = toCoords;
 function toCoords(degrees, x, y, multiplier) {
 	var coordinates = {x: x, y: y};
 	coordinates.x += multiplier * Math.cos(degrees * Math.PI / 180);

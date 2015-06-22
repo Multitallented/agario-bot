@@ -34,16 +34,16 @@ function impulseFilter(bot, myOrganism, organismState) {
 		biggestThreat = Math.max(biggestThreat, impulse.threat);
 		smallestThreat = Math.min(smallestThreat, impulse.threat);
 
-		if (impulse.threat < -1 && impulse.enemy.name && chaseList.indexOf(impulse.enemy.name) > -1) {
+		if (chaseList.length > 0 && impulse.threat < -1 && impulse.enemy.name && chaseList.indexOf(impulse.enemy.name) > -1) {
 			chaseImpulse = impulse;
 		}
 	}
-	var biggestImpulse = smallestThreat;
+	/*var biggestImpulse = smallestThreat;
 	if (biggestImpulse < 0) {
 		biggestImpulse = Math.max(biggestThreat, Math.abs(smallestThreat));
 	} else {
 		biggestImpulse = biggestThreat;
-	}
+	}*/
 
 	//Shoot mass behavior
 	if (smartShoot && bot.smartShootCount < 1) {
@@ -102,7 +102,7 @@ function impulseFilter(bot, myOrganism, organismState) {
 		}
 
 		//Feed people on feeder list
-		if (impulse.enemy.name && feedList.indexOf(impulse.enemy.name) > -1) {
+		if (feedList.length > 0 && impulse.enemy.name && feedList.indexOf(impulse.enemy.name) > -1) {
 			if (impulse.threat < 1) {
 				continue;
 			}
@@ -118,7 +118,7 @@ function impulseFilter(bot, myOrganism, organismState) {
 		}
 
 		//Don't eat or worry about friends
-		if (impulse.enemy.name && friendList.indexOf(impulse.enemy.name) > -1) {
+		if (friendList.length > 0 && impulse.enemy.name && friendList.indexOf(impulse.enemy.name) > -1) {
 			if (impulse.threat < 1) {
 				continue;
 			} else if (impulse.target.length < 1 ||
@@ -237,7 +237,7 @@ function impulseFilter(bot, myOrganism, organismState) {
 		}
 
 		//Don't go for targets that are already threatened
-		if (impulse.threat < 0) {
+		/*if (impulse.threat < 0) {
 			var tooRisky = false;
 			for (var j=0; j<organismState.enemies.length; j++) {
 				if (tooRisky) {
@@ -259,7 +259,7 @@ function impulseFilter(bot, myOrganism, organismState) {
 			if (tooRisky) {
 				continue;
 			}
-		}
+		}*/
 
 		if (previousThreat < 0) {
 			continue;
