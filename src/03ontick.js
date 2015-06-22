@@ -50,6 +50,31 @@ tick: function(organisms, myOrganisms, score) {
 		this.runCooldown = 2;
 	}
 
+	//If under threat, add threats for near edges
+	if (this.threatened) {
+		var edgeThreat = createEdgeThreat(myOrganism);
+		for(var i=0;i<edgeThreat.length;i++) {
+			this.impulses.push(edgeThreat[i]);
+		}
+	}
+
+	//convert virus threats to opportunities if not threatened
+	for (var i=0;i<this.impulses.length; i++) {
+		var impulse = this.impulses[i];
+		if (impulse.enemy.isVirus && !this.threatened && impulse.threat != 0) {
+			impulse.threat = -impulse.enemy.mass;
+		}
+	}
+
+	//Sort by biggest concern
+	this.impulses.sort(impulseSorter);
+
+
+	this.isRunning = this.immediateThreats || (this.threatened && this.runCooldown > 0);
+
+	this.opportunityOverride = true;
+	impulseFilter(this, myOrganism, organismState);
+
 	var runCooldownString = 'Safe Split: ' + (this.safeSplit ? '<span style="color: lightgreen;">True</span>' : '<span style="color: indianindianred;">False</span>');
 	runCooldownString += ' Threatened: ' + (this.threatened ? '<span style="color: indianred;">True</span>' : '<span style="color: lightgreen;">False</span>');
 	runCooldownString += ' Immediate: ' + (this.immediateThreats ? '<span style="color: indianred;">True</span>' : '<span style="color: lightgreen;">False</span>');
@@ -60,22 +85,6 @@ tick: function(organisms, myOrganisms, score) {
 	runCooldownString += ' Cooldown: ' + (!this.shotLastCooldown ? '<span style="color: lightgreen;">No</span>' : '<span style="color: indianred;">Yes</span>');
 	runCooldownString += ' (' + this.smartShootCount + ')';
 	$runCooldown.html(runCooldownString);
-
-	//If under threat, add threats for near edges
-	if (this.threatened) {
-		var edgeThreat = createEdgeThreat(myOrganism);
-		for(var i=0;i<edgeThreat.length;i++) {
-			this.impulses.push(edgeThreat[i]);
-		}
-	}
-
-	//Sort by biggest concern
-	this.impulses.sort(impulseSorter);
-
-
-	this.isRunning = this.immediateThreats || (this.threatened && this.runCooldown > 0);
-
-	impulseFilter(this, myOrganism, organismState);
 
 	if (this.immediateThreats) {
 		this.runCooldown = 40;

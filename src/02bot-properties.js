@@ -21,6 +21,7 @@ Ai.prototype = {
 	myOrganism: {},
 	moveCoords: {},
 	isRunning: false,
+	opportunityOverride: true,
 	onDraw: this.draw,
 	onMove: this.move,
 	onTick: this.tick,

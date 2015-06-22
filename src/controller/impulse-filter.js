@@ -5,8 +5,6 @@ function impulseFilter(bot, myOrganism, organismState) {
 	var previousThreat = 0;
 	var closestThreat = 999999;
 	var closestOpportunity = 999999;
-	var biggestThreat = -1;
-	var smallestThreat = 999999;
 	bot.closestVirus = null;
 	var closestVirusDistance = 999999;
 	var chaseImpulse = null;
@@ -31,19 +29,11 @@ function impulseFilter(bot, myOrganism, organismState) {
 		if (impulse.threat == 999999) {
 			continue;
 		}
-		biggestThreat = Math.max(biggestThreat, impulse.threat);
-		smallestThreat = Math.min(smallestThreat, impulse.threat);
 
 		if (chaseList.length > 0 && impulse.threat < -1 && impulse.enemy.name && chaseList.indexOf(impulse.enemy.name) > -1) {
 			chaseImpulse = impulse;
 		}
 	}
-	/*var biggestImpulse = smallestThreat;
-	if (biggestImpulse < 0) {
-		biggestImpulse = Math.max(biggestThreat, Math.abs(smallestThreat));
-	} else {
-		biggestImpulse = biggestThreat;
-	}*/
 
 	//Shoot mass behavior
 	if (smartShoot && bot.smartShootCount < 1) {
@@ -157,6 +147,7 @@ function impulseFilter(bot, myOrganism, organismState) {
 			continue;
 		}
 
+		//aggressive mode bot doesn't eat skittles. it hunts
 		if (aggressive && bot.isRunning && impulse.threat == -1) {
 			continue;
 		}
@@ -168,11 +159,6 @@ function impulseFilter(bot, myOrganism, organismState) {
 			impulse.worryDistance < impulse.distance) {
 			continue;
 		}
-
-		//ignore minor threats/opportunities
-		/*if (bot.isRunning && !bot.opportunity && tempArray.length > 0 && biggestImpulse > 1 && Math.abs(impulse.threat * 2) < biggestImpulse) {
-		 continue;
-		 }*/
 
 		//ignore threats that are farther away
 		if (!isEnemyVirus &&
@@ -217,12 +203,12 @@ function impulseFilter(bot, myOrganism, organismState) {
 		}
 
 		//if threatened and running, skip opportunities
-		if ((!aggressive || impulse.distance <= (getConsumeDistance(impulse.target[0], impulse.enemy) * 1.15 + myOrganism.speed * 2 + 30)) &&
+		/*if ((!aggressive || impulse.distance <= (getConsumeDistance(impulse.target[0], impulse.enemy) * 1.15 + myOrganism.speed * 2 + 30)) &&
 			!isEnemyVirus &&
 			bot.isRunning &&
 			impulse.threat < 1) {
 			continue;
-		}
+		}*/
 
 		//don't chase people you can't catch
 		if (!aggressive &&
@@ -269,6 +255,20 @@ function impulseFilter(bot, myOrganism, organismState) {
 			previousThreat = impulse.threat;
 		}
 	}
+
+	var smallestThreat = 999999;
+	var biggestThreat = -999999;
+	for (var i=0; i<tempArray.length; i++) {
+		var impulse = tempArray[i];
+
+		smallestThreat = Math.min(smallestThreat, impulse.threat);
+		biggestThreat = Math.max(biggestThreat, impulse.threat);
+	}
+	var opportunityOverride = biggestThreat < Math.abs(smallestThreat);
+	tempArray.filter(function(a) {
+		return opportunityOverride ? a.threat < 1 : a.threat > 0;
+	});
+
 	bot.impulses = tempArray;
 
 	//Use attackTarget
@@ -276,7 +276,7 @@ function impulseFilter(bot, myOrganism, organismState) {
 		bot.impulses.push(bot.attackTarget);
 	}
 
-	//If no impulses, then go to the center of the map
+	//If no impulses, then retry in a different mode or go to center of the map
 	if (bot.impulses.length < 1) {
 		if (!bot.threatened) {
 			bot.impulses.push(new Impulse(-1,
@@ -290,6 +290,12 @@ function impulseFilter(bot, myOrganism, organismState) {
 		} else if (!bot.isRunning) {
 			bot.runCooldown = 40;
 			bot.isRunning = true;
+			impulseFilter(bot, myOrganism, organismState);
+		} else {
+			bot.threatened = false;
+			bot.isRunning = false;
+			bot.immediateThreats = false;
+			bot.runCooldown = 0;
 			impulseFilter(bot, myOrganism, organismState);
 		}
 	}
