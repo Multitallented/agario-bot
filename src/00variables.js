@@ -12,7 +12,7 @@ var friendList = [];
 var enemyList = [];
 var feedList = [ "BotKnowsBest" ];
 var chaseList = [];
-window.keyControls = true;
+window.keyControls = false;
 window.dontShoot = false;
 window.shootWarmup = 2;
 

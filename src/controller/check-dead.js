@@ -1,5 +1,6 @@
 function checkDead(bot, myOrganisms, score) {
 	if (myOrganisms.length<1) {
+		keyControls = false;
 		if(bot.currentState!='dead'){
 			bot.gameHistory.push([
 				bot.lastStateChangeDate,
@@ -21,6 +22,7 @@ function checkDead(bot, myOrganisms, score) {
 	}
 	if (bot.currentState!='alive'){
 		bot.lastStateChangeDate=new Date;
+		keyControls = true;
 	}
 	bot.scoreHistory.push(score);
 
