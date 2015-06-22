@@ -104,6 +104,7 @@ function removeFromLists(name) {
 	friendList.remove(name);
 	feedList.remove(name);
 	enemyList.remove(name);
+	chaseList.remove(name);
 }
 
 var $statContainer = $('<div id="stat-container"></div>');

@@ -95,7 +95,7 @@ function impulseFilter(bot, myOrganism, organismState) {
 		var impulse = bot.impulses[i];
 
 		//Chasers
-		if (chaseImpulse != null) {
+		if (chaseImpulse != null && !this.immediateThreats) {
 			tempArray = [];
 			tempArray.push(chaseImpulse);
 			break;
@@ -217,7 +217,7 @@ function impulseFilter(bot, myOrganism, organismState) {
 		}
 
 		//if threatened and running, skip opportunities
-		if ((!aggressive || bot.immediateThreats) &&
+		if ((!aggressive || impulse.distance <= (getConsumeDistance(impulse.target[0], impulse.enemy) * 1.15 + myOrganism.speed * 2 + 30)) &&
 			!isEnemyVirus &&
 			bot.isRunning &&
 			impulse.threat < 1) {
@@ -237,7 +237,7 @@ function impulseFilter(bot, myOrganism, organismState) {
 		}
 
 		//Don't go for targets that are already threatened
-		/*if (impulse.threat < 0) {
+		if (impulse.threat < 0) {
 			var tooRisky = false;
 			for (var j=0; j<organismState.enemies.length; j++) {
 				if (tooRisky) {
@@ -259,7 +259,7 @@ function impulseFilter(bot, myOrganism, organismState) {
 			if (tooRisky) {
 				continue;
 			}
-		}*/
+		}
 
 		if (previousThreat < 0) {
 			continue;
