@@ -375,6 +375,10 @@
     }
 
     function D(a) {
+        if (!keyControls) {
+            return;
+        }
+
         if (ua()) {
             var b = K(1);
             b.setUint8(0, a);
@@ -1312,6 +1316,7 @@
     };
     Ba=function(a){
         F=null;
+        l("#overlays").fadeIn(a ? 200 : 500);
         setTimeout(function(){
             if (l('#nick').val() == 'random') {
                 setNick(skinNames[~~(skinNames.length * Math.pow(Math.random(), 2))]);

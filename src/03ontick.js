@@ -134,7 +134,7 @@ tick: function(organisms, myOrganisms, score) {
 			}
 		}
 
-		moveDistance = myOrganism.organisms.length > 1 ? impulse.distance + 60 : impulse.distance;
+		moveDistance = myOrganism.organisms.length > 1 ? impulse.distance + 60 : impulse.distance + 20;
 
 		//Only go with the biggest opportunity
 		if (impulse.threat < -1) {
