@@ -1,25 +1,5 @@
-function updateBehaviorChart(impulses, theBehaviorChart) {
-	for (var j=0; j<theBehaviorChart.segments.length; j++) {
-		theBehaviorChart.segments[j].value = 0;
-	}
-	for(var i=0; i<impulses.length; i++) {
-		if (impulses[i] == null) {
-			continue;
-		}
-		if (i==0) {
-			document.getElementById('behavior-char-title').textContent = impulses[i].label;
-		}
-		for (var j=0; j<theBehaviorChart.segments.length; j++) {
-			if (impulses[i].label.indexOf(theBehaviorChart.segments[j].label) == -1) {
-				continue;
-			}
-			theBehaviorChart.segments[j].value = Math.abs(impulses[i].threat);
-		}
-	}
-	theBehaviorChart.update();
-}
 //Map is 11200x11200
-$body = $('body');
+var $body = $('body');
 Chart.defaults.Line.pointDot=false
 Chart.defaults.Line.showScale=false
 Chart.defaults.global.responsive=false
@@ -107,7 +87,7 @@ function removeFromLists(name) {
 	chaseList.remove(name);
 }
 
-var $statContainer = $('<div id="stat-container"></div>');
+$statContainer = $('<div id="stat-container"></div>');
 $body.append($statContainer);
 $statContainer.css('position','fixed');
 $statContainer.css('top', '220px');
@@ -130,9 +110,3 @@ var $miscStat = $('<p id="misc-stat"></p>');
 $miscStat.css('color', 'white');
 $statContainer.append($miscStat);
 $miscStat.css('float', 'left');
-
-var behaviorCanvas=$('<div id="behavior-container" style="position:fixed;width:100%;bottom:5px;text-align:center"><h4 id="behavior-char-title">Bot Behavior</h4><canvas id="behavior-canvas" width="250" height="100"></canvas></div>')
-$body.append(behaviorCanvas);
-$("#behavior-container").css('pointer-events', 'none');
-
-var behaviorCtx=$('#behavior-canvas').get(0).getContext("2d");

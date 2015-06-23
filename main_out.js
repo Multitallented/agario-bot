@@ -1,4 +1,9 @@
 (function(f, l) {
+    var ai=window.ai=new Ai(
+        function(x1,y2){Y=x1;Z=y2;N()},
+        function(){D(17)},
+        function(){D(21)});
+
     function Ta() {
         ma = !0;
         ya();
@@ -47,29 +52,11 @@
         };
         f.onresize = Ca;
         f.requestAnimationFrame ? f.requestAnimationFrame(Da) : setInterval(pa, 1E3 / 60);
-	    setInterval(function() {
-		    if ((!window.botEnabled && !window.botOverride) || ai.shotLastCooldown) {
-			    if (ai.shotLastCooldown && ai.closestVirus != null && ai.closestVirus.enemy != null) {
-				    var mCoords = window.toCoords(ai.closestVirus.enemy.direction, window.innerWidth / 2, window.innerHeight / 2, 30);
-
-				    console.log(mCoords.x + ":" + mCoords.y);
-				    Y = mCoords.x;
-				    Z = mCoords.y;
-				    oa();
-			    }
-
-			    N();
-			    if (ai.smartShootCount > 0) {
-				    if (window.shootWarmup < 1) {
-					    D(21);
-					    c = !0;
-					    ai.smartShootCount--;
-				    } else {
-					    window.shootWarmup--;
-				    }
-			    }
-		    }
-	    }, 40);
+        setInterval(function() {
+            if ((!window.botEnabled && !window.botOverride)) {
+                N();
+            }
+        }, 40);
         w && l("#region").val(w);
         Ea();
         W(l("#region").val());
@@ -209,7 +196,7 @@
             L(a);
             a = K(5);
             a.setUint8(0, 255);
-            a.setUint32(1, 673720361, !0);
+            a.setUint32(1, 154669859, !0);
             L(a);
             a = K(1 + b.length);
             a.setUint8(0, 80);
@@ -332,7 +319,7 @@
             g = a.getInt16(b, !0);
             b += 2;
             for (var f = a.getUint8(b++), k = a.getUint8(b++), l = a.getUint8(b++), f = (f << 16 | k << 8 | l).toString(16); 6 >
-                f.length;) f = "0" + f;
+            f.length;) f = "0" + f;
             var f = "#" + f,
                 k = a.getUint8(b++),
                 l = !!(k & 1),
@@ -388,9 +375,6 @@
     }
 
     function D(a) {
-	    if (!keyControls && (a == 17 || a == 21)) {
-		    return;
-	    }
         if (ua()) {
             var b = K(1);
             b.setUint8(0, a);
@@ -449,7 +433,7 @@
         va ? (g.fillStyle = ia ? "#111111" : "#F2FBFF", g.globalAlpha = .05, g.fillRect(0, 0, r, s), g.globalAlpha = 1) : cb();
         v.sort(function(a, b) {
             return a.size == b.size ? a.id - b.id : a.size -
-                b.size
+            b.size
         });
         g.save();
         g.translate(r / 2, s / 2);
@@ -457,7 +441,7 @@
         g.translate(-t, -u);
         for (d = 0; d < I.length; d++) I[d].T(g);
         for (d = 0; d < v.length; d++) v[d].T(g);
-	    ai.draw(g);
+        ai.draw(g);
         if (sa) {
             ca = (3 * ca + qa) / 4;
             da = (3 * da + ra) / 4;
@@ -1265,7 +1249,7 @@
                         },
                         U: function(a) {
                             return a.x < this.x +
-                                this.f / 2 ? a.y < this.y + this.c / 2 ? 0 : 2 : a.y < this.y + this.c / 2 ? 1 : 3
+                            this.f / 2 ? a.y < this.y + this.c / 2 ? 0 : 2 : a.y < this.y + this.c / 2 ? 1 : 3
                         },
                         V: function(a, b) {
                             return a.x < this.x + this.f / 2 && (a.y < this.y + this.c / 2 && b(0) || a.y >= this.y + this.c / 2 && b(2)) || a.x >= this.x + this.f / 2 && (a.y < this.y + this.c / 2 && b(1) || a.y >= this.y + this.c / 2 && b(3)) ? !0 : !1
@@ -1321,67 +1305,65 @@
             f.onload = Ta
         }
     }
-	var ai=window.ai=new Ai(
-		function(x1,y2){Y=x1;Z=y2;N()},
-		function(){D(17)},
-		function(){D(21)});
-	var onUpdate=$a;
-	$a=function(d,c){
-		onUpdate(d,c);
-		ai.tick(v,p,J); //blobs,myblobs,score
-	};
-	Ba=function(a){
-		F=null;
-		setTimeout(function(){
-			if (l('#nick').val() == 'random') {
-				setNick(skinNames[~~(skinNames.length * Math.pow(Math.random(), 2))]);
-			} else {
-				setNick(l('#nick').val());
-			}
-		},5000)
-	}
+    var onUpdate=$a;
+    $a=function(d,c){
+        onUpdate(d,c);
+        ai.tick(v,p,J); //blobs,myblobs,score
+    };
+    Ba=function(a){
+        F=null;
+        setTimeout(function(){
+            if (l('#nick').val() == 'random') {
+                setNick(skinNames[~~(skinNames.length * Math.pow(Math.random(), 2))]);
+            } else {
+                setNick(l('#nick').val());
+            }
+        },5000)
+    }
 })(window, window.jQuery);
 
 window.skinNames=[
-	'Yaranaika',
-	'Pokerface',
-	'Sir',
-	'Mars',
-	'Stalin',
-	'Moon',
-	'Wojak',
-	'Imperial Japan',
-	'Doge',
-	'Earth',
-	'Bait',
-	'Steam',
-	'Piccolo',
-	'Sanik',
-	'Cia',
-	'4chan',
-	'Ayy Lmao',
-	'Qing Dynasty',
-	'ProDota',
-	'NASA'
+    'Yaranaika',
+    'Pokerface',
+    'Sir',
+    'Mars',
+    'Stalin',
+    'Moon',
+    'Wojak',
+    'Imperial Japan',
+    'Doge',
+    'Earth',
+    'Bait',
+    'Steam',
+    'Piccolo',
+    'Sanik',
+    'Cia',
+    '4chan',
+    'Ayy Lmao',
+    'Qing Dynasty',
+    'ProDota',
+    'NASA'
 ];
-var $playBtn = $('#playBtn');
-$playBtn
-	.after($playBtn.removeAttr('onclick').clone().click(function(e){
-		if ($('#nick').val() == 'random') {
-			setNick(window.skinNames[~~(window.skinNames.length * Math.random())]);
-		} else {
-			setNick($('#nick').val());
-		}
-		return false;
-	})).remove()
-//$('#gamemode').remove()
-$playBtn.next().remove()
-$('#instructions').before('<form id="ipform" style="margin-top: 20px; width: 100%;"><input type="text" class="form-control" id="ip-address" placeholder="ip-address" /></form>');
-$('#ipform').submit(function(e) {
-	e.preventDefault();
-	//var ipAddress = $('#ip-address').val();
-	Ga();
-	return false;
+$(document).ready(function() {
+    var $playBtn = $('#playBtn');
+    $playBtn
+        .after($playBtn.removeAttr('onclick').clone().click(function(e){
+            if ($('#nick').val() == 'random') {
+                setNick(window.skinNames[~~(window.skinNames.length * Math.random())]);
+            } else {
+                setNick($('#nick').val());
+            }
+            return false;
+        })).remove()
+    //$('#gamemode').remove()
+    $playBtn.next().remove()
+    $('#instructions').before('<form id="ipform" style="margin-top: 20px; width: 100%;"><input type="text" class="form-control" id="ip-address" placeholder="ip-address" /></form>');
+    $('#ipform').submit(function(e) {
+        e.preventDefault();
+        //var ipAddress = $('#ip-address').val();
+        Ga();
+        return false;
+    });
+    $('#instructions + hr + center').remove();
+    setDarkTheme(true);
 });
-$('#instructions + hr + center').remove();
-setDarkTheme(true);

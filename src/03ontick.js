@@ -195,7 +195,7 @@ tick: function(organisms, myOrganisms, score) {
 
 	var moveCoords = null;
 	if (this.smartShootCount > 0 || this.shotLastCooldown) {
-		moveCoords = toCoords(this.closestVirus.direction,window.innerWidth / 2, window.innerHeight / 2,15);
+		moveCoords = toCoords(this.closestVirus.direction,window.innerWidth / 2, window.innerHeight / 2,20);
 		moveCoords.x = Math.floor(moveCoords.x);
 		moveCoords.y = Math.floor(moveCoords.y);
 	} else {
@@ -218,15 +218,16 @@ tick: function(organisms, myOrganisms, score) {
 	if (this.smartShootCount > 0 && !this.shotLastCooldown) {
 		this.shotLastCooldown = true;
 
-		/*if (!window.dontShoot) {
+		if (!window.dontShoot) {
 			for (var i = 0; i < this.smartShootCount; i++) {
 				setTimeout(pressW, i * 80 + 40);
 			}
-		}*/
-		//setTimeout(function() {
-		//	window.ai.shotLastCooldown = false;
-		//}, this.smartShootCount * 80 + 41);
-		//this.smartShootCount = 0;
+		}
+		setTimeout(function() {
+			window.ai.shotLastCooldown = false;
+		}, this.smartShootCount * 80 + 41);
+		this.smartShootCount = 0;
+		this.move(moveCoords.x, moveCoords.y);
 	}
 
 	window.botOverride = (this.defenseSplitCooldown > 0 || (shouldSplit && this.impulses[0].threat > 0));

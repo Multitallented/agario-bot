@@ -1,6 +1,4 @@
 /* Display logic */
-//var friendlyAudio=$('<audio src="'+chrome.extension.getURL('smw_princess_help.wav')+'"></audio>').get(0)
-//friendlyAudio.play();
 
 Chart.defaults.Line.pointDot=false
 Chart.defaults.Line.showScale=false
@@ -30,10 +28,6 @@ var scoreChart=new Chart(scoreCanvas.get(0).getContext("2d")).Line({labels:label
 	}
 ]});
 
-var behaviorDiv=$('<div id="ai-intuition"><h4 id="ai-status">Intuition</h4><canvas id="behavior-canvas" width="350" height="100"></canvas></div>')
-$('body').append(behaviorDiv)
-behaviorChart=new Chart($('#behavior-canvas').get(0).getContext("2d")).Doughnut(ai.considerations)
-
 ai.onTick=function(){
 	if(!((this.scoreHistory.length+1)%10)){
 		var j=0;
@@ -47,50 +41,5 @@ ai.onTick=function(){
 			scoreChart.datasets[1].points[10*j++].value=~~(gameStat.maxSize)
 		}
 		scoreChart.update()
-
-		if(this.isTeachMode){
-			$('#ai-status').html('TEACH MODE')
-		}else if(this.gameHistory.length<100) {
-			$('#ai-status').html('<span style="color:red">LEARNING FOR 100 LIVES (life '+(this.gameHistory.length+1)+')</span>')
-		}else if(this.gameHistory.length%2){
-			$('#ai-status').html('<span style="color:red">LEARNING FOR 1 LIFE</span>')
-		}else{
-			$('#ai-status').html('Intuition')
-		}
-	}
-
-	var needsUpdate=false
-	for(var i=0;i<this.considerations.length;i++){
-		if(behaviorChart.segments[i].value!=this.considerations[i].value){
-			behaviorChart.segments[i].value=this.considerations[i].value
-			needsUpdate=true
-		}
-	}
-	if(needsUpdate){
-		behaviorChart.update()
 	}
 }
-
-var heatMapDiv=$('<div id="heat-map-div"><canvas id="heat-map" width="175" height="175"></canvas></div>')
-$('body').append(heatMapDiv)
-var heatMapCtx=$('#heat-map').get(0).getContext("2d")
-
-var miniMapCanvas=$('<canvas id="mini-map" width="175" height="175"></canvas>')
-$('body').append(miniMapCanvas)
-miniMapCtx=miniMapCanvas.get(0).getContext("2d")
-
-chrome.runtime.onMessage.addListener(function(m,s,res){
-	switch(m[0]){
-		case 'intuition':
-			if(m[1]&&m[2]){
-				ai.considerations[m[1]].weight=parseInt(m[2])
-				console.log(m[1],m[2])
-			}
-			res(ai.considerations)
-			break;
-		case 'teach':
-			ai.isTeachMode=m[1]
-			res(ai.isTeachMode)
-			break;
-	}
-})
