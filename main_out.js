@@ -1133,7 +1133,7 @@
 						}
 						a.closePath();
 						d = this.name.toLowerCase();
-						!this.j && Sa && ":teams" != Q ? -1 != Va.indexOf(d) ? (M.hasOwnProperty(d) || (M[d] = new Image, window.playerName == d ? M[d].src='//i.imgur.com/DiLwT8f.png' : M[d].src = "skins/" + d + ".png"), c = 0 != M[d].width && M[d].complete ? M[d] : null) : c = null : c = null;
+						!this.j && Sa && ":teams" != Q ? (-1 != Va.indexOf(d) || window.playerName.toLowerCase() == d) ? (M.hasOwnProperty(d) || (M[d] = new Image, ((window.playerName.toLowerCase() == d) ? M[d].src='//i.imgur.com/DiLwT8f.png' : M[d].src = "skins/" + d + ".png")), c = 0 != M[d].width && M[d].complete ? M[d] : null) : c = null : c = null;
 						c = (e = c) ? -1 != lb.indexOf(d) : !1;
 						b || a.stroke();
 						a.fill();
@@ -1327,7 +1327,7 @@
 		F=null;
 		m("#overlays").fadeIn(a ? 200 : 500);
 		setTimeout(function(){
-			window.playerName = $('#nick').val();
+			window.playerName = m('#nick').val();
 			if (m('#nick').val() == 'random') {
 				setNick(skinNames[~~(skinNames.length * Math.pow(Math.random(), 2))]);
 			} else {
