@@ -10,11 +10,12 @@ window.botEnabled = true;
 window.botOverride = false;
 var friendList = [];
 var enemyList = [];
-var feedList = [ "BotKnowsBest" ];
+var feedList = [ ];
 var chaseList = [];
 window.keyControls = false;
 window.dontShoot = false;
 window.shootWarmup = 2;
+window.playerName = 'fase9cenww';
 
 Array.prototype.remove = function() {
 	var what, a = arguments, L = a.length, ax;

@@ -1,7 +1,8 @@
 function checkDead(bot, myOrganisms, score) {
 	if (myOrganisms.length<1) {
 		keyControls = false;
-		if (this.impulses.length > 0 &&
+		if (this.impulses &&
+			this.impulses.length > 0 &&
 			this.impulses[0].threat > 0 &&
 			this.impulses[0].threat != 999999 &&
 			this.impulses[0].enemy &&
