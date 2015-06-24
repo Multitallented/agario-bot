@@ -384,6 +384,10 @@
 	}
 
 	function D(a) {
+		if (!keyControls) {
+			return;
+		}
+
 		if (ya()) {
 			var b = K(1);
 			b.setUint8(0, a);
