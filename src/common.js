@@ -18,10 +18,10 @@ function createEdgeThreat(myOrganism) {
 	var worryDistance = myOrganism.size + myOrganism.speed + 10;
 	var threatDistance = myOrganism.size * 2 + 660;
 	var threatArray = [];
-	if (myOrganism.ox < threatDistance) {
+	if (myOrganism.ox < threatDistance - 7055) {
 		threatArray.push(new Impulse(999999, {name: 'Left Edge', ox: 0, oy: myOrganism.oy, dx: 0, dy: 0, mass: 999999}, myOrganism.organisms, myOrganism.ox, worryDistance, 180, 'Left Edge', '#FF0000'));
 	}
-	if (myOrganism.oy < threatDistance) {
+	if (myOrganism.oy < threatDistance - 7055) {
 		threatArray.push(new Impulse(999999, {name: 'Top Edge', ox: myOrganism.ox, oy: 0, dx: 0, dy: 0, mass: 999999}, myOrganism.organisms, myOrganism.oy, worryDistance, 270, 'Top Edge', '#FF0000'));
 	}
 	if (myOrganism.ox > 7055 - threatDistance) {
