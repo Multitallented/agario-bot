@@ -6,6 +6,11 @@
 	"content_scripts": [
 		{
 			"matches":["http://agar.io/*"],
+			"js":["override.js"],
+			"run_at": "document_start"
+		},
+		{
+			"matches":["http://agar.io/*"],
 			"js":["jquery.js","quadtree.js","ext/Chart.js","Bot.js","main_out.js", "script.js"],
 			"run_at":"document_end"
 		}
